@@ -1,6 +1,7 @@
 #!/usr/bin/env bash
 set -u
 
+#one-off setup script: builds full folder tree and copies helper scripts into place for fresh C2 test run. COnverts starting scaffold PDB into CIF format for ligmpnn first cycle input
 home_directory="/home/b5ae/mvg2713124.b5ae"
 scratch_directory="/scratch/b5ae/mvg2713124.b5ae"
 work_directory="${scratch_directory}/cytbx_pipeline"
@@ -20,6 +21,7 @@ mkdir -p "${trajectory_path}/initial"
 touch "${trajectory_path}/timestamps.txt"
 mkdir -p "${work_directory}/logs"
 
+#create full per-tool input/output directory tree for each planned cycle
 for i in $(seq 1 $number_of_iterations); do
     mkdir -p "${exec_directory}/cycle_${i}/LigandMPNN/inputs"
     mkdir -p "${exec_directory}/cycle_${i}/LigandMPNN/outputs"
@@ -34,6 +36,7 @@ for i in $(seq 1 $number_of_iterations); do
     mkdir -p "${trajectory_path}/cycle_${i}"
 done
 
+#convert starting monomer PDB into CIF (lignmpnn expected input)
 echo "converting starting structure to CIF"
 "${biopython_python}" - << PYEOF
 from Bio.PDB import PDBParser, MMCIFIO
@@ -44,6 +47,7 @@ io.save("${exec_directory}/cycle_1/LigandMPNN/inputs/top_scoring.cif")
 io.save("${trajectory_path}/initial/top_scoring.cif")
 PYEOF
 
+#copy helper scripts into each cycle's working folders so available locally
 for i in $(seq 1 $number_of_iterations); do
     cp "${work_directory}/scripts/biopython_selection.py" "${exec_directory}/cycle_${i}/LigandMPNN/inputs/"
     cp "${work_directory}/mpnn_to_boltz2.sh" "${exec_directory}/cycle_${i}/boltz/inputs/"
