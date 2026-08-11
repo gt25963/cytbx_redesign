@@ -6,6 +6,8 @@
 #SBATCH --mem=16GB
 #SBATCH --output=/scratch/b5ae/mvg2713124.b5ae/cytbx_pipeline/logs/relax_fmnB_%j.out
 #SBATCH --account=brics.b5ae
+
+# script for pre-relax step in abandoned FMN Hem1 Rosetta pocket attempt, run before FastDesign in fastdesign_fmn_hemb.py
 source /home/b5ae/mvg2713124.b5ae/miniconda3/etc/profile.d/conda.sh
 conda activate pyrosetta
 cd /scratch/b5ae/mvg2713124.b5ae/cytbx_pipeline
