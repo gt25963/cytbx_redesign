@@ -14,9 +14,11 @@ cycle=$1
 input_fasta=$2
 output_dir=$3
 
+# Activate conda environment with Chai-1 installed
 source /home/b5ae/mvg2713124.b5ae/miniconda3/etc/profile.d/conda.sh
 conda activate chai
 
+# Run Chai-1 prediction across all sequences in the input fasta, batched
 python /scratch/b5ae/mvg2713124.b5ae/cytbx_pipeline/scripts/batch_aggregate_rank_v2.py \
     "${input_fasta}" \
     "${output_dir}"
