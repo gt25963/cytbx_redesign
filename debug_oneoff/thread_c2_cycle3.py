@@ -2,6 +2,9 @@
 """
 Thread id11 sequence onto relaxed C2 backbone for cycle 3 input.
 """
+
+# One-off recovery script: rebuilds a cycle 3 input structure for id11 by threading its designed sequence back onto a relaxed backbone, used when the normal pipeline output for this candidate needed to be reconstructed manually
+
 from Bio import SeqIO
 import re
 
@@ -40,7 +43,6 @@ init()
 pose = pose_from_file("/scratch/b5ae/mvg2713124.b5ae/cytbx_pipeline/main_pipeline/CytbX_4tool/cycle_2/id11_relaxed_membrane.pdb")
 
 # Set sequence (for chain A, since C2 is only 2 chains of protein)
-# Assuming chain A is the designable chain
 for i, aa in enumerate(id11_seq, start=1):
     if i <= pose.total_residue():
         res = pose.residue(i)
