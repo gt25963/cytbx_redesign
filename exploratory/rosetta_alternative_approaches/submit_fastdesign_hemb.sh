@@ -7,6 +7,8 @@
 #SBATCH --cpus-per-task=8
 #SBATCH --mem=16GB
 #SBATCH --output=/scratch/b5ae/mvg2713124.b5ae/cytbx_pipeline/logs/fastdes_fmnB_%j.out
+
+#script for the abandoned FMN-at-Hem1 pocket design attempt - pocket too tight for FMN placement. Generates 8 FastDesign decoys before the track was discontinued in favour of Hem2
 source /home/b5ae/mvg2713124.b5ae/miniconda3/etc/profile.d/conda.sh
 conda activate pyrosetta
 cd /scratch/b5ae/mvg2713124.b5ae/cytbx_pipeline
