@@ -16,6 +16,7 @@ output_dir=$3
 diffusion_samples=$4
 
 # libcuda symlink fix
+#Workaround: link the cluster's real libcuda into a user-writable location, since the Boltz container expects libcuda.so.1 but the node only provides a versioned name
 USER_CUDA_COMPAT="$HOME/boltz_cuda_compat"
 REAL_LIBCUDA="/usr/lib64/libcuda.so.565.57.01"
 mkdir -p "$USER_CUDA_COMPAT/lib"
@@ -23,6 +24,7 @@ if [ ! -f "$USER_CUDA_COMPAT/lib/libcuda.so.1" ]; then
     ln -s "$REAL_LIBCUDA" "$USER_CUDA_COMPAT/lib/libcuda.so.1"
 fi
 
+#Run Boltz-2 prediction on all YAML inputs in the folder
 singularity exec --nv \
     --bind "$yaml_folder":/input \
     --bind "$output_dir":/output \
