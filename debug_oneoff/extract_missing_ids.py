@@ -19,11 +19,12 @@ Each sequence ID forms a "block" of paired header/sequence lines:
 Usage:
     python extract_missing_ids.py <input_fasta> <id1,id2,id3,...> <output_fasta>
 """
+#recovery script: pulls out only candidates listed by id from a larger chai input fasta, for re-running/checking specific designs without resubmitting the whole batch
 import sys
 import re
 
-
 def parse_fasta_records(path):
+    # read fasta into pairs (header, seqeunce), one per record
     records = []
     header = None
     seq_lines = []
@@ -43,6 +44,7 @@ def parse_fasta_records(path):
 
 
 def group_into_blocks(records):
+    # group records into per-candidate blocks, starting a new block whenever a chain1 protein header appears (marks start of new desing)
     blocks = []
     current_block = []
     for header, seq in records:
@@ -57,6 +59,7 @@ def group_into_blocks(records):
 
 
 def block_id(block):
+    # pull numeric desing id out of a block's chain1 header
     header = block[0][0]
     m = re.search(r"_id(\d+)_chain1$", header)
     if not m:
@@ -77,6 +80,7 @@ def main():
 
     print(f"Parsed {len(records)} FASTA records into {len(blocks)} blocks")
 
+    #keep ounly the blocks matching a requested target id
     found_ids = set()
     output_records = []
     for block in blocks:
@@ -85,6 +89,7 @@ def main():
             output_records.extend(block)
             found_ids.add(bid)
 
+    #flag any requestedd ids that weren't found at all, so nothing goes missing silenetly 
     missing_from_input = target_ids - found_ids
     if missing_from_input:
         print(f"WARNING: these target IDs were not found in the input fasta at all: {sorted(missing_from_input)}")
