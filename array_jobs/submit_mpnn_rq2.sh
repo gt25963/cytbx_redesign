@@ -21,6 +21,7 @@ source /home/b5ae/mvg2713124.b5ae/miniconda3/etc/profile.d/conda.sh
 conda activate ligandmpnn
 cd /scratch/b5ae/mvg2713124.b5ae/LigandMPNN
 
+# RQ2 (FMN/Q8) redesign: same as RQ1 ligandmpnn, but holds fixed_residues (both native haem-coordinating histidines) constant while redesigning the cofactor pocket, and omits --homo_oligomer since RQ2 designs are monomers
 python run.py \
     --model_type "${model_type}" \
     --pdb_path "${input_pdb}" \
