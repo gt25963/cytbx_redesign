@@ -3,7 +3,7 @@
 #SBATCH --job-name=chai_array
 #SBATCH --nodes=1
 #SBATCH --time=1:30:00
-#SBATCH --mem=256GB
+#SBATCH --mem=256GB #same as script submit_chai_array but 256 gb is clarified becasue after testing this is the memory that works 
 #SBATCH --array=0-44%5
 #SBATCH --output=/scratch/b5ae/mvg2713124.b5ae/cytbx_pipeline/logs/chai_array_%A_%a.out
 #SBATCH --account=brics.b5ae
@@ -17,15 +17,13 @@ if [ -z "${target_id}" ]; then
     echo "ERROR: no id found at line ${line_num} of ${ids_list}"; exit 1
 fi
 echo "Task ${SLURM_ARRAY_TASK_ID}: processing id=${target_id}"
-# find this id's chain1 header line (prefix-agnostic)
 start_line=$(grep -nE "name=.*_id${target_id}_chain1$" "${chai_input_fa}" | head -1 | cut -d: -f1)
 if [ -z "${start_line}" ]; then
     echo "ERROR: could not find id=${target_id} in ${chai_input_fa}"; exit 1
 fi
-# find the NEXT design's chain1 header to bound this block (handles any chain count)
 next_line=$(awk -v s="${start_line}" 'NR>s && /name=.*_chain1$/ {print NR; exit}' "${chai_input_fa}")
 if [ -z "${next_line}" ]; then
-    end_line=$(wc -l < "${chai_input_fa}")        # last block: go to EOF
+    end_line=$(wc -l < "${chai_input_fa}")
 else
     end_line=$((next_line - 1))
 fi
