@@ -3,14 +3,21 @@
 #SBATCH --gpus=1
 #SBATCH --time=0:30:00
 #SBATCH --output=/scratch/b5ae/mvg2713124.b5ae/cytbx_pipeline/logs/af3_array_%A_%a.out
-## Usage: sbatch --array=1-20 run_af3_array.sh <lineage_base_dir>
+
+# Usage: sbatch --array=1-20 run_af3_array.sh <lineage_base_dir>
 lineage_base=$1
+
+#Each array task processes one batch, numbered by SLURM_ARRAY_TASK_ID
 input_path="${lineage_base}/inputs/batches/batch_${SLURM_ARRAY_TASK_ID}"
 output_path="${lineage_base}/outputs/batch_${SLURM_ARRAY_TASK_ID}"
 mkdir -p "${output_path}"
+
+#Set paths to AF3 model weights, sequence database, and container
 weight_path=$SCRATCH/weights
 database_path=/projects/b5ae/AF3/database/
 af3_container=/projects/b5ae/AF3/af3.sif
+
+#Run AF3 prediction on this batch's input files, binding local paths into container
 singularity exec \
     --nv \
     --bind ${input_path}:/opt/af_input \
