@@ -14,6 +14,7 @@ olig_state=$3
 source /home/b5ae/mvg2713124.b5ae/miniconda3/etc/profile.d/conda.sh
 conda activate rpxdock
 
+#RPXDock was built against these specific compiler versions
 export CXX=/usr/bin/g++-12
 export CC=/usr/bin/gcc-12
 
@@ -22,6 +23,7 @@ hscore_dir=/home/b5ae/mvg2713124.b5ae/miniconda3/envs/rpxdock/lib/python3.12/sit
 mkdir -p "${output_dir}"
 cd "${output_dir}"
 
+# run symmetric docking on the monomer for the given cyclic oligomer state (C2/3/4/5), scoring poses with small_ilv_h hydrophobic-core hscore, keeping the top 10 poses (see methods section symmetric docking and prescreening in report)
 python -mrpxdock \
     --architecture "C${olig_state}" \
     --inputs1 "${input_monomer}" \
