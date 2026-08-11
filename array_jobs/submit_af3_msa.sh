@@ -13,11 +13,13 @@ input_path=$2
 output_path=$3
 json_path=$4
 
+# Set paths to AF3 model weights, sequence database, install, and container
 weight_path=/scratch/b5ae/mvg2713124.b5ae/weights
 database_path=/projects/b5ae/AF3/database
 AF3_path=/projects/b5ae/AF3/alphafold3
 af3_container=/projects/b5ae/AF3/AF3_old.sif
 
+#Run af3 on a single named JSON input
 singularity exec --nv \
     --bind "${input_path}":/opt/af_input \
     --bind "${output_path}":/opt/af_output \

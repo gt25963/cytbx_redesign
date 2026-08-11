@@ -14,9 +14,12 @@ cycle=$1
 input_fasta=$2
 output_dir=$3
 
+# activate environment with ESM3
 source /home/b5ae/mvg2713124.b5ae/miniconda3/etc/profile.d/conda.sh
 conda activate esm
 
+# run ESM3 pTM/pLDDT scoring on all sequences in input fasta 
+# CPU only as CUDA driver mistmatch (detailed in methods section) 
 python /scratch/b5ae/mvg2713124.b5ae/cytbx_pipeline/scripts/esm3_score.py \
     "${input_fasta}" \
     "${output_dir}"

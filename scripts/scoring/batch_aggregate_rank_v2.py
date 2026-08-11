@@ -15,10 +15,10 @@ AGGREGATE_RANK_FILE = OUTPUT_BASE_DIR / "highest_aggregate_scores.csv"
 def parse_fasta(fasta_file):
     """
     Parse FASTA into groups of chains belonging to the same sequence.
-    Groups are identified by the base ID (e.g. top_scoring.cif_id2)
-    stripping the _chain suffix.
+    Groups are identified by the base ID (e.g. top_scoring.cif_id2) stripping the _chain suffix.
     Returns a list of dicts: {name, chains: [{name, sequence}], ligands: [{name, smiles}]}
     """
+    # Walk through every record, grouping chains/ligands that belong to the same design
     groups = {}
     group_order = []
     current_chain = None
@@ -38,6 +38,7 @@ def parse_fasta(fasta_file):
             current_chain = base_name
 
         elif "ligand|name=" in description and current_chain:
+            #ligand records are attached to whichever protein group came before them
             ligand_name = description.split("name=")[1]
             groups[current_chain]["ligands"].append({"name": ligand_name, "smiles": sequence})
 
@@ -45,6 +46,7 @@ def parse_fasta(fasta_file):
 
 
 def clean_and_expand_data(data):
+    #conver numpy score arrays into plain python values/lists for CSV 
     if isinstance(data, np.ndarray):
         if data.ndim == 0:
             return data.item()
@@ -56,6 +58,7 @@ def clean_and_expand_data(data):
 
 
 def extract_scores_to_dict(npz_file):
+    #pull key chai confidence metrics out of a single prediction's npz output
     if not npz_file.exists():
         print(f"File {npz_file} not found.")
         return {}
@@ -73,8 +76,9 @@ def extract_scores_to_dict(npz_file):
 
 protein_data = parse_fasta(INPUT_FASTA)
 
+#run chai structure prediction separately for each design ( group of chains + ligands)
 for group in protein_data:
-    # build fasta with all chains + ligands for this sequence
+    # rebuild a standalone fasta containing just this design's chains and ligands
     fasta_content = ""
     for chain in group["chains"]:
         fasta_content += f">protein|name={chain['name']}\n{chain['sequence']}\n"
@@ -88,6 +92,7 @@ for group in protein_data:
 
     fasta_path.write_text(fasta_content)
 
+    #run chai interface directly on this single design
     candidates = run_inference(
         fasta_file=fasta_path,
         output_dir=output_dir,
@@ -98,6 +103,7 @@ for group in protein_data:
         use_esm_embeddings=True,
     )
 
+    #collect scores from every model npz chai produced for this design
     npz_files = list(output_dir.glob("*.npz"))
     combined_scores_file = output_dir / "combined_scores.csv"
 
@@ -110,11 +116,13 @@ for group in protein_data:
                 writer.writerow(scores)
 
     print(f"Processed {group['name']} - scores saved to {combined_scores_file}")
+    #clean the temporary per-desing fasta once predicition is done
     try:
         fasta_path.unlink()
     except FileNotFoundError:
         pass
 
+# pick out the single best scoring model for each design, across all designs, and rank them into one summary file
 all_combined_scores = []
 
 for group in protein_data:
@@ -134,6 +142,9 @@ for group in protein_data:
                 highest_aggregate_row["directory"] = group["name"]
                 all_combined_scores.append(highest_aggregate_row)
 
+#write final ranked summary, sorted by aggregate score, highest first. 
+# The aggegarte score is chai's overall summary score which is inflated by cofactor predicition confidence. 
+# The protein-protein/protein-cofactor score used for candidate selection is extracted separately through per_chain_pair_iptm, not this file
 with AGGREGATE_RANK_FILE.open(mode="w", newline="") as file:
     writer = csv.DictWriter(file, fieldnames=["directory", "file", "aggregate_score", "iptm", "ptm"])
     writer.writeheader()

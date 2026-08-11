@@ -18,15 +18,20 @@ interface_residues=$5
 model_type=$6
 temperature=$7
 
+# each array task writes own batch subfolder
 task_output_dir="${output_base_dir}/batch_${SLURM_ARRAY_TASK_ID}"
 mkdir -p "${task_output_dir}"
 
+# give each task a distinct random seed so parallel tasks don't generate identical sequences
 task_seed=$((SLURM_ARRAY_TASK_ID * 100000 + RANDOM))
 
+#activate ligandmpnn
 source /home/b5ae/mvg2713124.b5ae/miniconda3/etc/profile.d/conda.sh
 conda activate ligandmpnn
 cd /scratch/b5ae/mvg2713124.b5ae/LigandMPNN
 
+# redesign the input ligandmpnn, holding fixed_residues constant, redesigning interface_residues, packing side chains with ligand context, and applying homo-oligomer symmetry.
+# splitting across an array (vs. a single job) parallel generation of the full 200-sequence pool each cycle.
 python run.py \
     --model_type "${model_type}" \
     --pdb_path "${input_cif}" \

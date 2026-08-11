@@ -11,8 +11,12 @@
 cycle=$1
 input_fasta=$2
 output_dir=$3
+# activate esm3
 source /home/b5ae/mvg2713124.b5ae/miniconda3/etc/profile.d/conda.sh
 conda activate esm
+
+#ESM3 scoring - skip any sequences already scored in output directory (not just CSV record, check existing PDB output)
+#Use this instead of submit_esm3.sh if previous run timed out partway through the batch
 python /scratch/b5ae/mvg2713124.b5ae/cytbx_pipeline/scripts/esm3_score_resumable.py \
     "${input_fasta}" \
     "${output_dir}"

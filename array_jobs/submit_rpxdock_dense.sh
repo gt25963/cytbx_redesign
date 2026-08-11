@@ -22,6 +22,7 @@ hscore_dir=/home/b5ae/mvg2713124.b5ae/miniconda3/envs/rpxdock/lib/python3.12/sit
 mkdir -p "${output_dir}"
 cd "${output_dir}"
 
+# denser sampling control (finer cart/ori resolution, keeping top 100 poses instead of 10) tested against the default-density baseline; did not improve pose quality and was not adopted (Table 1, methods in report)
 python -mrpxdock \
     --architecture "C${olig_state}" \
     --inputs1 "${input_monomer}" \

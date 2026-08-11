@@ -17,9 +17,11 @@ interface_residues=$6
 model_type=$7
 temperature=$8
 
+#activate ligandmpnn
 source /home/b5ae/mvg2713124.b5ae/miniconda3/etc/profile.d/conda.sh
 conda activate ligandmpnn
 
+#redesign the input structure with ligmpnn, holding fixed_residues constant (e.g. haem-coordinating histidines), and redesign interface_residues, packing side chains with ligand context, and apply homo-oligomer symmetry
 cd /scratch/b5ae/mvg2713124.b5ae/LigandMPNN
 
 python run.py \

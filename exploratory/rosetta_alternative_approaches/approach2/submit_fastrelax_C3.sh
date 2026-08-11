@@ -8,6 +8,7 @@
 #SBATCH --time=02:00:00
 #SBATCH --output=/scratch/b5ae/mvg2713124.b5ae/cytbx_pipeline/logs/fastrelax_C3_%j.out
 
+#submit script for fastrelax_membrane Rosetta approach 2 - applied to C3 top prescreened docking pose
 conda run -n pyrosetta python /scratch/b5ae/mvg2713124.b5ae/cytbx_pipeline/approach2/fastrelax_membrane.py \
     /scratch/b5ae/mvg2713124.b5ae/cytbx_pipeline/prescreening/oligomer_screen/C3/rpxdock/cytbx_C3_CytbX__top3_3.pdb \
     /scratch/b5ae/mvg2713124.b5ae/cytbx_pipeline/approach2/C3/top3_relaxed_apo.pdb \

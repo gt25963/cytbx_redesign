@@ -7,4 +7,5 @@
 #SBATCH --cpus-per-task=8
 #SBATCH --time=4:00:00
 #SBATCH --output=/scratch/b5ae/mvg2713124.b5ae/cytbx_pipeline/logs/energy_comparison_%j.out
+# script for energy comparison - tyr75 vs phe75 relax/energy diagnostic
 conda run -n pyrosetta python /scratch/b5ae/mvg2713124.b5ae/cytbx_pipeline/diagnostics/energy_comparison/energy_comparison.py

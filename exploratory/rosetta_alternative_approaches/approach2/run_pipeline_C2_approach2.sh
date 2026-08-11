@@ -6,4 +6,6 @@
 #SBATCH --mem=32GB
 #SBATCH --output=/scratch/b5ae/mvg2713124.b5ae/cytbx_pipeline/logs/cytbx_C2_approach2_%j.out
 #SBATCH --account=brics.b5ae
+
+#bash command to run the actual pipeline for the dimer. Same would be for trimer, but replaced with trimer values where appropriate.
 bash /scratch/b5ae/mvg2713124.b5ae/cytbx_pipeline/approach2/master_cytbx_C2_approach2.sh

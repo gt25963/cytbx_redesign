@@ -1,6 +1,7 @@
+#Same as FMN version but for Q10 (before discontinuation once Q8 was found correct
 #!/usr/bin/env bash
 set -u
-# ---- Step 4: score Boltz outputs on PROTEIN<->COFACTOR pair [0][2] ----
+# Step 4: score Boltz outputs on PROTEIN<->COFACTOR pair [0][2] 
 echo "step 4: scoring Boltz-2 (protein<->cofactor pair) at $(timestamp)"
 "${biopython_python}" - << EOF
 import json, csv, glob, os
@@ -56,7 +57,7 @@ for id in "${top_ids[@]}"; do
     num=$(echo "${id}" | grep -oP '\d+$'); [ -n "${num}" ] && numeric_ids+=("${num}")
 done
 
-# ---- Step 5: Chai-1 array (single protein chain + 2 ligands) ----
+# Step 5: Chai-1 array 
 echo "step 5: Chai-1 on top ${#numeric_ids[@]} at $(timestamp)"
 top_ids_pattern=$(printf "| id=%s," "${numeric_ids[@]}"); top_ids_pattern="${top_ids_pattern:2}"
 grep -A1 -E "(${top_ids_pattern})" "${fasta_file}" > "${chai_input_path}/top_sequences.fa" 2>/dev/null || true
@@ -85,7 +86,7 @@ else
     echo "Chai-1 complete: all ${n_chai_ids} present"
 fi
 
-# ---- Step 6: AF3 array ----
+# Step 6: AF3 array 
 echo "step 6: AF3 (array) on top ${#numeric_ids[@]} at $(timestamp)"
 "${biopython_python}" "${work_directory}/scripts/fasta_to_af3_nomsa_rq2.py" \
     "${chai_input_path}/top_sequences.fa" "${af3_input_path}" "${cofactor}"
@@ -113,7 +114,7 @@ else
     echo "AF3 complete: all ${#numeric_ids[@]} present"
 fi
 
-# ---- Step 7: compile + five-track selection (protein<->cofactor [0][2]) ----
+# Step 7: compile + five-track selection
 echo "step 7: compiling scores + seed selection at $(timestamp)"
 "${biopython_python}" - << EOF
 import json, csv, glob, os

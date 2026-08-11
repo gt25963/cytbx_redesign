@@ -4,7 +4,7 @@
 #SBATCH --nodes=1
 #SBATCH --gpus=1
 #SBATCH --time=4:00:00
-#SBATCH --mem=128GB
+#SBATCH --mem=128GB # identical to the submit_mpnn.sh script but with higher memory incase its too little, for example dimer vs. trimer require different memories
 #SBATCH --output=/scratch/b5ae/mvg2713124.b5ae/cytbx_pipeline/logs/mpnn_cycle%j.out
 #SBATCH --account=brics.b5ae
 
