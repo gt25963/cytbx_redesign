@@ -23,6 +23,7 @@ conda activate ligandmpnn
 
 cd /scratch/b5ae/mvg2713124.b5ae/LigandMPNN
 
+# same as submit_mpnn.sh, but specificially with seed argument for reproducilbe/ seed-controlled design runs (e.g. seedtest variants in exploratory/)
 python run.py \
     --model_type "${model_type}" \
     --pdb_path "${input_cif}" \
