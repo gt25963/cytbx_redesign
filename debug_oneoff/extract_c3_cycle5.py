@@ -2,18 +2,22 @@
 import json, csv, glob, os, re, sys
 import numpy as np
 
+#C3 cycle 5 specifically pools two parallel seed lineages into one shared candidate pool - this script re-derives a consistent "pooled index" id across all four scoring tools (Chai-1, AF3, Boltz-2, ESM3) so scores from different tools for the same candidate can be joined correctly
 WORK = "/scratch/b5ae/mvg2713124.b5ae/cytbx_pipeline"
 CYCLE_DIR = os.path.join(WORK, sys.argv[1])
 seed_dirs = [os.path.join(WORK, sys.argv[2]), os.path.join(WORK, sys.argv[3])]
 OUT = os.path.join(WORK, sys.argv[4])
 os.makedirs(OUT, exist_ok=True)
 
+#Protein-protein chain pairs to average over (C3 trimer = 3 pairwise interfaces)
 pairs = [(0,1),(0,2),(1,2)]
 
 def orig_id(s):
+    #Pull the trailing numeric id off a directory/file name
     m = re.search(r'_id(\d+)$', s)
     return m.group(1) if m else None
 
+# chai directories are named seq_c5_<seed>_id<origid>_id<pooledidx>, e.g. seq_c5_id121_id60_id7 - this regex recovers all three pieces so can build the seed+origid -> pooledidx lookup used to join the other tools' scores
 chai_pattern = re.compile(r'^seq_c5_(?P<seed>id\d+)_id(?P<origid>\d+)_id(?P<pooledidx>\d+)$')
 pooled_idx_map = {}
 chai_best = {}
@@ -27,6 +31,7 @@ for npz in glob.glob(f"{CYCLE_DIR}/chai/outputs/*/scores.model_idx_*.npz"):
     if "per_chain_pair_iptm" not in d: continue
     mat = d["per_chain_pair_iptm"]
     if mat.ndim == 3: mat = mat[0]
+    # average all three pairwise interface scores, keep the best model per candidate
     vals = [(mat[i][j]+mat[j][i])/2 for i,j in pairs if i < mat.shape[0] and j < mat.shape[1]]
     if vals:
         s = round(float(np.mean(vals)),4)
@@ -38,6 +43,7 @@ print(f"Chai: {len(chai_rows)} rows, {len(pooled_idx_map)} pooled-idx mappings")
 with open(f"{OUT}/chai.csv","w",newline="") as f:
     w = csv.DictWriter(f, fieldnames=["id","chai_protein_pair_iptm"]); w.writeheader(); w.writerows(chai_rows)
 
+#AF3: extract the same pairwise-averaged score from chain_pair_iptm, keyed directly by the pooled index in the AF3 output folder name (no seed lookup needed here, since AF3 was run once on the already-pooled candidate list)
 af3_rows = []
 for jf in glob.glob(f"{CYCLE_DIR}/af3/outputs/batch_*/id*/*summary_confidences.json"):
     parts = jf.split('/')
@@ -56,6 +62,7 @@ print(f"AF3: {len(af3_rows)} rows")
 with open(f"{OUT}/af3.csv","w",newline="") as f:
     w = csv.DictWriter(f, fieldnames=["id","chain_pair_iptm"]); w.writeheader(); w.writerows(af3_rows)
 
+#Boltz-2 and ESM3: unlike Chai-1/AF3, these ran separately per seed lineage (seed_dirs), so loop both lineages and use the pooled_idx_map built above to translate each candidate's original per-lineage id into the shared pooled id
 boltz_rows, esm_rows = [], []
 for SEED_DIR in seed_dirs:
     full_name = os.path.basename(SEED_DIR)
@@ -75,8 +82,10 @@ for SEED_DIR in seed_dirs:
                     vals.append(np.mean([(pc[str(i)][str(j)]+pc[str(j)][str(i)])/2 for i,j in pairs]))
                 except: pass
         if vals:
+            #Keep the best (max) model score per candidate
             boltz_rows.append({"id": pidx, "iptm": round(float(max(vals)),4)})
 
+    #ESM3 scores come from a compiled CSV per seed lineage, not raw JSONs
     esm3_csv = f"{SEED_DIR}/esm3/outputs/esm3_scores.csv"
     if os.path.exists(esm3_csv):
         with open(esm3_csv) as f:
