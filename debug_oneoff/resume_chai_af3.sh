@@ -6,6 +6,7 @@
 #SBATCH --nodes=1
 #SBATCH --mem=8GB
 #SBATCH --output=/scratch/b5ae/mvg2713124.b5ae/cytbx_pipeline/logs/resume_%j.out
+#Exit if any referenced variable is undefined (catch typos early)
 set -u
 # Usage: sbatch resume_chai_af3.sh <C2|C3>
 variant="$1"
@@ -16,6 +17,7 @@ work_directory="${scratch_directory}/cytbx_pipeline"
 biopython_python="${home_directory}/miniconda3/envs/biopython/bin/python"
 timestamp() { date +"%F_%T"; }
 
+#set state-specific paths and chain counts (C2 dimer vs C3 trimer)
 if [ "${variant}" == "C2" ]; then
     master_folder="CytbX_4tool"; protein_chain_count=2; chai_oligo=2
 elif [ "${variant}" == "C3" ]; then
@@ -35,19 +37,20 @@ chai_output_path="${exec_directory}/cycle_${i}/chai/outputs"
 af3_input_path="${exec_directory}/cycle_${i}/af3/inputs"
 af3_output_path="${exec_directory}/cycle_${i}/af3/outputs"
 
-# full 50 numeric ids (for verification + AF3), and the missing subset (for Chai)
+#load the full 50 candidate ids and the subset still missing Chai-1 output full 50 numeric ids (for verification + AF3), and the missing subset (for Chai)
 mapfile -t numeric_ids < "${chai_input_path}/chai_ids.txt"
 missing_file="${chai_input_path}/chai_ids_missing.txt"
 n_missing=$(wc -l < "${missing_file}")
 echo "[${variant}] resuming at $(timestamp): ${n_missing} missing Chai ids of ${#numeric_ids[@]} total"
 
-# ===== Step 5 (resume): Chai-1 on MISSING ids only =====
+# Step 5 (resume): Chai-1 on MISSING ids only 
 if [ "${n_missing}" -gt 0 ]; then
     sbatch --array=0-$((n_missing - 1))%5 "${work_directory}/submit_chai_array.sh" \
         "${missing_file}" \
         "${chai_input_path}/chai_input.fa" \
         "${chai_output_path}"
     echo "Chai-1 resume array submitted at $(timestamp)"
+    # poll SLURM queue until the resubmitted array job has finished
     while true; do
         n_chai_jobs=$(squeue -u "$(whoami)" -n chai_array 2>/dev/null | wc -l)
         if [ "${n_chai_jobs}" -le 1 ]; then
@@ -59,6 +62,7 @@ if [ "${n_missing}" -gt 0 ]; then
     done
 fi
 
+# verify actual output files exist, don't just trust that SLURM finished cleanly
 missing_chai_ids=()
 for id in "${numeric_ids[@]}"; do
     if ! find "${chai_output_path}" -path "*id${id}*combined_scores.csv" 2>/dev/null | grep -q .; then
@@ -71,13 +75,15 @@ else
     echo "Chai-1 complete at $(timestamp): all ${#numeric_ids[@]} ids present"
 fi
 
-# ===== Step 6: AF3 on ALL 50 (neither master reached AF3) =====
+# Step 6: AF3 on ALL 50 (neither master reached AF3) 
 echo "step 6: AF3 array on top ${#numeric_ids[@]} at $(timestamp)"
+#convert the top-50 sequences to AF3's no-MSA JSON input format
 "${biopython_python}" "${work_directory}/scripts/fasta_to_af3_nomsa.py" \
     "${chai_input_path}/top_sequences.fa" \
     "${af3_input_path}"
 cd "${af3_input_path}"
 mkdir -p batches
+#split the 50 input JSONs into batches of 5, for the AF3 array job
 batch_i=0; batch=0
 for f in id*.json; do
     if [ $((batch_i % 5)) -eq 0 ]; then
@@ -89,6 +95,7 @@ done
 n_batches=$(ls "${af3_input_path}/batches" | wc -l)
 cd "${work_directory}"
 
+#submit and wait for the AF3 array to finish
 af3_job_id=$(sbatch --parsable --array=1-${n_batches} "${work_directory}/run_af3_array.sh" \
     "${exec_directory}/cycle_${i}/af3")
 echo "AF3 array job ID: ${af3_job_id}"
@@ -102,6 +109,7 @@ while true; do
     sleep 60
 done
 
+#verify real output files rather than trusting the queue status
 missing_af3_ids=()
 for id in "${numeric_ids[@]}"; do
     if ! find "${af3_output_path}" -path "*id${id}*summary_confidences.json" ! -path "*seed*" 2>/dev/null | grep -q .; then
