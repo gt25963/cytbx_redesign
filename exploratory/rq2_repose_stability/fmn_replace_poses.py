@@ -2,6 +2,9 @@
 """
 fmn_replace_poses.py  (RQ2, arm B - re-placement)
 """
+# NOTE: Part of the earlier, discontinued Rosetta-based FMN-at-Hem1 pocket design attempt. 
+# This script tries to geometrically place a swapped-in FMN ligand into the Hem1 site by rigid-body transform (rotation/translation), rather than via LigandMPNN redesign, which is the actual method used for the final reported FMN track. 
+# Kept for reference; not part of the pipeline that produced the dissertation's reported results.
 
 import argparse
 import os
@@ -14,8 +17,10 @@ from fmn_common import (read_atoms, atoms_by_name, centroid,
 
 
 def rotation_between(a, b):
+    # Rotation matrix that maps vector a onto vector b, via Rodrigues' formula
     a = a / np.linalg.norm(a); b = b / np.linalg.norm(b)
     v = np.cross(a, b); s = np.linalg.norm(v); c = np.dot(a, b)
+    # a and b are parallel/antiparallel: cross product is undefined, handle directly
     if s < 1e-8:
         return np.eye(3) if c > 0 else -np.eye(3)
     vx = np.array([[0, -v[2], v[1]], [v[2], 0, -v[0]], [-v[1], v[0], 0]])
@@ -23,12 +28,15 @@ def rotation_between(a, b):
 
 
 def rodrigues(axis, angle_rad):
+    # Standard Rodrigues' rotation formula: rotate by angle_rad around a given axis
     k = axis / np.linalg.norm(axis)
     K = np.array([[0, -k[2], k[1]], [k[2], 0, -k[0]], [-k[1], k[0], 0]])
     return np.eye(3) + np.sin(angle_rad) * K + (1 - np.cos(angle_rad)) * (K @ K)
 
 
 def pose1_geometric(fmn_atoms, hemc_coords):
+    # Baseline pose: align FMN's isoalloxazine ring plane onto Hem2's ring plane, then translate ring centroid onto haem centroid. 
+    # Purely geometric, no consideration of nearby His sidechains yet.
     fmn = atoms_by_name(fmn_atoms)
     ring = [fmn[n] for n in ISO_RING_ATOMS if n in fmn]
     ring_c = centroid(ring)
@@ -41,6 +49,7 @@ def pose1_geometric(fmn_atoms, hemc_coords):
 
 
 def pose2_his_anchored(fmn_atoms, his_n_coords, hemc_coords):
+    # Refines pose1 by additionally rotating FMN within its own ring plane so its hydrogen-bonding edge points toward the coordinating His nitrogens, rather than at an arbitrary in-plane orientation
     R0, t0 = pose1_geometric(fmn_atoms, hemc_coords)
     fmn = atoms_by_name(fmn_atoms)
     ring = [fmn[n] for n in ISO_RING_ATOMS if n in fmn]
@@ -50,6 +59,7 @@ def pose2_his_anchored(fmn_atoms, his_n_coords, hemc_coords):
     ring_n = best_fit_plane_normal(apply_transform(ring, R0, t0))
     his_mid = centroid(his_n_coords)
 
+    # Project vectors into the ring plane so the rotation angle is computed purely in-plane (out-of-plane component is irrelevant to this step)
     def in_plane(v):
         return v - np.dot(v, ring_n) * ring_n
     cur = in_plane(edge_c0 - ring_c0)
@@ -57,6 +67,7 @@ def pose2_his_anchored(fmn_atoms, his_n_coords, hemc_coords):
     if np.linalg.norm(cur) < 1e-6 or np.linalg.norm(tgt) < 1e-6:
         return R0, t0
     cur /= np.linalg.norm(cur); tgt /= np.linalg.norm(tgt)
+    # Signed angle between cur and tgt, using ring_n to determine rotation direction
     cosang = np.clip(np.dot(cur, tgt), -1, 1)
     sinang = np.dot(np.cross(cur, tgt), ring_n)
     ang = np.arctan2(sinang, cosang)
@@ -65,9 +76,9 @@ def pose2_his_anchored(fmn_atoms, his_n_coords, hemc_coords):
     t = Rrot @ (t0 - ring_c0) + ring_c0
     return R, t
 
-
 def sweep_best_pose(fmn_atoms, hemc_coords, clash_ca, angle_step_deg=10,
                     include_flip=True):
+    # Brute-force search over in-plane rotation angle (and optionally a 180-degree ring flip) to find the orientation that maximises minimum distance to nearby clash-prone Ca atoms - i.e. the least clashing pose
     fmn = atoms_by_name(fmn_atoms)
     fmn_names = list(fmn.keys())
     fmn_coords0 = np.array([fmn[n] for n in fmn_names])
@@ -79,6 +90,7 @@ def sweep_best_pose(fmn_atoms, hemc_coords, clash_ca, angle_step_deg=10,
     ring_c_target = apply_transform([ring_c0], R0, t0)[0]
     ring_n = best_fit_plane_normal(apply_transform(ring, R0, t0))
 
+    # Build an arbitrary axis lying within the ring plane to flip around (falls back to a second candidate if the first happens to be parallel to ring_n)
     arbitrary = np.array([1.0, 0.0, 0.0])
     inplane = arbitrary - np.dot(arbitrary, ring_n) * ring_n
     if np.linalg.norm(inplane) < 1e-6:
@@ -86,6 +98,7 @@ def sweep_best_pose(fmn_atoms, hemc_coords, clash_ca, angle_step_deg=10,
         inplane = arbitrary - np.dot(arbitrary, ring_n) * ring_n
     flip_axis = inplane / np.linalg.norm(inplane)
 
+    # Score = worst-case (minimum) distance from any FMN atom to any clash Ca - higher is better (further from clashing residues)
     def score_for(R, t):
         moved = apply_transform(fmn_coords0, R, t)
         worst = float("inf")
@@ -98,6 +111,7 @@ def sweep_best_pose(fmn_atoms, hemc_coords, clash_ca, angle_step_deg=10,
     results = []
     best_score, best_R, best_t, best_deg, best_flip = -1.0, None, None, None, None
 
+    # Grid search over flip x rotation angle, keeping the single best-scoring pose
     for flip in flips:
         Rflip = rodrigues(flip_axis, np.pi) if flip else np.eye(3)
         for deg in range(0, 360, angle_step_deg):
@@ -114,6 +128,8 @@ def sweep_best_pose(fmn_atoms, hemc_coords, clash_ca, angle_step_deg=10,
 
 def sweep_translate(fmn_atoms, hemc_coords, clash_ca, base_R, base_deg,
                     base_flip, extent=1.5, step=0.25):
+    # Given a fixed rotation (typically the best one from sweep_best_pose), brute-force search a small 3D translation grid around it for further clash reduction. 
+    # base_R argument is unused - rotation is recomputed from base_deg/base_flip instead
     fmn = atoms_by_name(fmn_atoms)
     fmn_coords0 = np.array([fmn[n] for n in fmn.keys()])
 
@@ -131,6 +147,7 @@ def sweep_translate(fmn_atoms, hemc_coords, clash_ca, base_R, base_deg,
         inplane = arbitrary - np.dot(arbitrary, ring_n) * ring_n
     flip_axis = inplane / np.linalg.norm(inplane)
 
+    # Rebuild the fixed rotation from the chosen angle/flip
     Rflip = rodrigues(flip_axis, np.pi) if base_flip else np.eye(3)
     Rrot = rodrigues(ring_n, np.radians(base_deg))
     R = Rrot @ Rflip @ R0
@@ -144,6 +161,7 @@ def sweep_translate(fmn_atoms, hemc_coords, clash_ca, base_R, base_deg,
             worst = min(worst, d)
         return worst
 
+    # Exhaustive dx/dy/dz grid search within +/- extent at the given step size
     offsets = np.arange(-extent, extent + 1e-9, step)
     results = []
     best_score, best_t, best_off = -1.0, None, None
@@ -160,6 +178,7 @@ def sweep_translate(fmn_atoms, hemc_coords, clash_ca, base_R, base_deg,
 
 
 def report_edge_to_his(out_pdb, his_n_coords):
+    # Prints the FMN hydrogen-bonding edge's distance to each candidate His nitrogen, sorted closest-first, as a quick check of H-bond geometry
     fmn = atoms_by_name(read_atoms(out_pdb, want_resname="FMN"))
     edge = [fmn[n] for n in HBOND_EDGE_ATOMS if n in fmn]
     ec = centroid(edge)
@@ -169,6 +188,7 @@ def report_edge_to_his(out_pdb, his_n_coords):
 
 
 def report_clash_distances(out_pdb, clash_chain, clash_residues):
+    # Prints minimum Ca-to-FMN distance at each specified clash-prone residue
     fmn_coords = [a["xyz"] for a in read_atoms(out_pdb, want_resname="FMN")]
     ca = {}
     for a in read_atoms(out_pdb, want_chain=clash_chain):
@@ -181,7 +201,6 @@ def report_clash_distances(out_pdb, clash_chain, clash_residues):
             continue
         d = min(np.linalg.norm(ca[r] - m) for m in fmn_coords)
         print(f"      res{r}: {d:.2f} A")
-
 
 def main():
     ap = argparse.ArgumentParser()
@@ -210,6 +229,7 @@ def main():
     if not hemc_coords:
         raise SystemExit(f"No HEM {args.hemc_resnum} found in {args.hemc_ref}")
 
+    # Collect His ND1/NE2 atoms across all specified coordinating residues
     his_n = []
     for hr in args.his:
         for a in read_atoms(args.swap, want_resnum=hr):
@@ -221,6 +241,7 @@ def main():
     print(f"FMN atoms: {len(fmn_atoms)} | HEM_C ref atoms: {len(hemc_coords)} | "
           f"His N atoms: {len(his_n)}")
 
+    # Three mutually exclusive modes, in order of precedence: fine-grained translation sweep (needs a fixed angle from a prior --sweep run), rotation/flip sweep, or the default two-pose comparison
     if args.sweep_translate:
         if args.fixed_angle is None:
             raise SystemExit("--sweep-translate requires --fixed-angle")
@@ -281,6 +302,7 @@ def main():
             print(f"    angle={deg_r:3d} flip={flip_r}  worst_d={s_r:.2f} A")
         return
 
+    # Default mode: just write out both baseline poses for direct comparison
     R1, t1 = pose1_geometric(fmn_atoms, hemc_coords)
     out1 = os.path.join(args.outdir, "fmn_pose1_geometric.pdb")
     write_transformed_ligand(args.swap, out1, "FMN", R1, t1)
