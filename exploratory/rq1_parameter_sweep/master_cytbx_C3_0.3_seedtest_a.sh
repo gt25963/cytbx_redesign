@@ -1,15 +1,12 @@
 #!/usr/bin/env bash
-# dos2unix master_cytbx_C2.sh if edited on Windows
-
-# ============================================================
-# CytbX Oligomeric Redesign Pipeline — RQ1 — C2 Dimer
+# CytbX Oligomeric Redesign Pipeline - RQ1 - C3 Trimer
 # LigandMPNN -> Boltz-2 (all) + ESM3 (all) -> AF3 + Chai-1 (top N)
-# Starting structure: C2 top2 from oligomeric state screening
-# ============================================================
+# This is the representative version of the main pipeline for the seettest.
+# Everything is basically the same and the same reasoning as the master_cytbx_C3_0.2.sh script
 
 set -u
 
-# --- DIRECTORIES ---
+# DIRECTORIES
 home_directory="/home/b5ae/mvg2713124.b5ae"
 scratch_directory="/scratch/b5ae/mvg2713124.b5ae"
 work_directory="${scratch_directory}/cytbx_pipeline"
@@ -18,40 +15,37 @@ exec_directory="${work_directory}/main_pipeline/${master_folder}"
 trajectory_path="${exec_directory}/design_trajectory"
 biopython_python="${home_directory}/miniconda3/envs/biopython/bin/python"
 
-# --- UTILITIES ---
+# UTILITIES
 timestamp() { date +"%F_%T"; }
 
-# --- STARTING STRUCTURE ---
+# STARTING STRUCTURE
 initial_structure="/scratch/b5ae/mvg2713124.b5ae/cytbx_pipeline/prescreening/oligomer_screen/C3/holo/top2_holo.pdb"
 
-# --- OLIGOMER PARAMETERS ---
+# OLIGOMER PARAMETERS
 oligomeric_state=3
 ligand=HEM
-num_ligands=6         # 2 haem per subunit x 2 subunits
+num_ligands=6 # 2 haem per subunit x 3 subunits
 
-# --- DESIGN PARAMETERS ---
+# DESIGN PARAMETERS
 number_of_iterations=1
 total_sequences=50
 
-# --- LIGANDMPNN ---
+# LIGANDMPNN
 mpnn_model_type="global_label_membrane_mpnn"
 mpnn_temp=0.3
 mpnn_seed=77777
 fixed_residues=""
 
-# --- STRUCTURE PREDICTION ---
+# STRUCTURE PREDICTION
 boltz_samples=2
 top_n_for_af3_chai=3
 af3_samples=5
 chai_samples=5
 
-# --- SCORING ---
+# SCORING
 ipsae_cutoff=15
 
-# ============================================================
 # FOLDER SETUP
-# ============================================================
-
 echo "pipeline starting at $(timestamp)"
 echo "setting up folder structure for ${number_of_iterations} cycles"
 
@@ -98,18 +92,15 @@ done
 
 echo "folders and starting structure ready at $(timestamp)"
 
-# ============================================================
+
 # MAIN ITERATION LOOP
-# ============================================================
 
 echo "iteration starting at $(timestamp)"
 echo "iteration starting at $(timestamp)" >> "${trajectory_path}/timestamps.txt"
 
 for i in $(seq 1 $number_of_iterations); do
 
-    echo "============================================================"
     echo "cycle ${i} of ${number_of_iterations} starting at $(timestamp)"
-    echo "============================================================"
     echo "cycle ${i} starting at $(timestamp)" >> "${trajectory_path}/timestamps.txt"
 
     mpnn_input_path="${exec_directory}/cycle_${i}/LigandMPNN/inputs"
@@ -124,9 +115,7 @@ for i in $(seq 1 $number_of_iterations); do
     chai_input_path="${exec_directory}/cycle_${i}/chai/inputs"
     chai_output_path="${exec_directory}/cycle_${i}/chai/outputs"
 
-    # --------------------------------------------------------
     # STEP 1: SELECT INTERFACE RESIDUES
-    # --------------------------------------------------------
     echo "step 1: selecting interface residues at $(timestamp)"
     cd "${mpnn_input_path}"
     "${biopython_python}" biopython_selection.py top_scoring.cif > selection_output.txt
@@ -142,9 +131,7 @@ for i in $(seq 1 $number_of_iterations); do
     echo "interface residues for design: ${interface_residues}"
     cd "${work_directory}"
 
-    # --------------------------------------------------------
     # STEP 2: LIGANDMPNN
-    # --------------------------------------------------------
     echo "step 2: running LigandMPNN cycle ${i} at $(timestamp)"
     sbatch "${work_directory}/submit_mpnn_seeded.sh" \
         "${i}" \
@@ -177,19 +164,15 @@ for i in $(seq 1 $number_of_iterations); do
 
     cp "${fasta_file}" "${trajectory_path}/cycle_${i}/"
 
-    # --------------------------------------------------------
     # STEP 3: CONVERT FASTA TO BOLTZ-2 YAML
-    # --------------------------------------------------------
     echo "step 3: converting FASTA to Boltz-2 YAML at $(timestamp)"
     bash "${boltz_input_path}/mpnn_to_boltz2.sh" \
         "${fasta_file}" \
         -l "${ligand}:${num_ligands}" \
         -o "${boltz_input_path}/yamls"
 
-    # --------------------------------------------------------
     # STEP 4: BOLTZ-2 + ESM3 IN PARALLEL
-    # --------------------------------------------------------
-    echo "step 4: running Boltz-2 on all sequences at $(timestamp)"
+    echo "step 4a: running Boltz-2 on all sequences at $(timestamp)"
     sbatch "${work_directory}/submit_boltz.sh" \
         "${i}" \
         "${boltz_input_path}/yamls" \
@@ -228,9 +211,8 @@ for i in $(seq 1 $number_of_iterations); do
         sleep 30
     done
 
-    # --------------------------------------------------------
+
     # STEP 5: SCORE BOLTZ-2 OUTPUTS
-    # --------------------------------------------------------
     echo "step 5: scoring Boltz-2 outputs at $(timestamp)"
 
     "${biopython_python}" - << EOF
@@ -265,9 +247,7 @@ EOF
 
     cp "${boltz_output_path}/scores_file.csv" "${trajectory_path}/cycle_${i}/"
 
-    # --------------------------------------------------------
     # STEP 6: COMBINE BOLTZ-2 AND ESM3 SCORES
-    # --------------------------------------------------------
     echo "step 6: combining scores at $(timestamp)"
     "${biopython_python}" "${work_directory}/scripts/combine_scores.py" \
         "${boltz_output_path}/scores_file.csv" \
@@ -284,9 +264,7 @@ EOF
     echo "top sequences: ${top_ids[*]}"
     cp "${boltz_output_path}/combined_scores.csv" "${trajectory_path}/cycle_${i}/"
 
-    # --------------------------------------------------------
     # STEP 7: AF3 STRUCTURE PREDICTION (TOP N)
-    # --------------------------------------------------------
     echo "step 7: running AF3 on top ${top_n_for_af3_chai} sequences at $(timestamp)"
 
     af3_failed=0
@@ -316,7 +294,7 @@ EOF
     sleep 60
     if ! ls "${work_directory}/logs/af3_cycle${i}"*.out 2>/dev/null | grep -q "." || \
        grep -r "permission denied" "${work_directory}/logs/af3_cycle${i}"*.out 2>/dev/null | grep -q "weights"; then
-        echo "WARNING: AF3 unavailable — skipping AF3 for cycle ${i}"
+        echo "WARNING: AF3 unavailable - skipping AF3 for cycle ${i}"
         af3_failed=1
     fi
 
@@ -329,7 +307,7 @@ EOF
             fi
             af3_wait=$(( af3_wait + 30 ))
             if [ "${af3_wait}" -ge 10800 ]; then
-                echo "WARNING: AF3 timed out — skipping AF3 for cycle ${i}"
+                echo "WARNING: AF3 timed out - skipping AF3 for cycle ${i}"
                 af3_failed=1
                 break
             fi
@@ -342,12 +320,10 @@ EOF
         cp "${af3_output_path}"/*.cif "${trajectory_path}/cycle_${i}/" 2>/dev/null || true
         echo "AF3 outputs saved to trajectory"
     else
-        echo "AF3 skipped — proceeding to Chai-1"
+        echo "AF3 skipped - proceeding to Chai-1"
     fi
 
-    # --------------------------------------------------------
     # STEP 8: CHAI-1 PREDICTION (TOP N)
-    # --------------------------------------------------------
     echo "step 8: running Chai-1 on top ${top_n_for_af3_chai} sequences at $(timestamp)"
 
     # extract numeric IDs from top_ids for FASTA matching
@@ -372,11 +348,9 @@ EOF
         "${chai_input_path}/chai_input.fa" \
         "${chai_output_path}"
 
-    echo "Chai-1 submitted for cycle ${i} — running in background, pipeline continuing"
+    echo "Chai-1 submitted for cycle ${i} - running in background, pipeline continuing"
 
-    # --------------------------------------------------------
     # STEP 9: SELECT TOP STRUCTURE FOR NEXT CYCLE
-    # --------------------------------------------------------
     echo "step 9: selecting top structure for next cycle at $(timestamp)"
 
     top_id=$(awk -F',' 'NR==2 {print $1}' "${boltz_output_path}/combined_scores.csv")
@@ -406,9 +380,7 @@ EOF
 
 done
 
-# ============================================================
 # COMPILE FINAL SCORES
-# ============================================================
 echo "compiling scores across all cycles at $(timestamp)"
 echo "cycle,top_id,confidence_score,iptm,combined_score" \
     > "${trajectory_path}/compiled_scores.csv"
