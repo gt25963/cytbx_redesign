@@ -6,4 +6,6 @@
 #SBATCH --mem=16GB
 #SBATCH --output=/scratch/b5ae/mvg2713124.b5ae/cytbx_pipeline/logs/cytbx_4tool_%j.out
 #SBATCH --account=brics.b5ae
+
+# Wraps master_cytbx_4tool.sh in an sbatch job so the pipeline runs unattended on a compute node, in turn freeing up the terminal
 bash /scratch/b5ae/mvg2713124.b5ae/cytbx_pipeline/main_pipeline/master_cytbx_4tool.sh
