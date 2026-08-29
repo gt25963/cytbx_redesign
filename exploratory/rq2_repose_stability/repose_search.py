@@ -1,19 +1,15 @@
 #!/usr/bin/env python3
-"""
-Rigid-body re-pose search for an RQ2 cofactor to clear flagged-residue clashes
-while keeping the redox ring near its His9/His67 coordination pocket.
+# Rigid-body re-pose search for an RQ2 cofactor to clear flagged-residue clashes while keeping the redox ring near its His9/His67 coordination pocket.
+# Searches rotations (about ring normal + small tilts) x translations applied to the LIGAND ONLY. 
+# Scores worst-case clearance from each flagged residue's CA to the nearest ring/head-group heavy atom. 
+# Keeps the transform that maximizes the minimum clearance, subject to ring-centroid drift <= max_drift from the original.
 
-Searches rotations (about ring normal + small tilts) x translations applied to
-the LIGAND ONLY. Scores worst-case clearance from each flagged residue's CA to
-the nearest ring/head-group heavy atom. Keeps the transform that maximizes the
-minimum clearance, subject to ring-centroid drift <= max_drift from the original.
+# Usage:
+## python repose_search.py --pdb INPUT.pdb --lig FMN --out OUTPUT.pdb \
+## --flagged 44,51,106 --max_drift 3.0
+## python repose_search.py --pdb INPUT.pdb --lig U10 --out OUTPUT.pdb \
+## --flagged 9,67 --max_drift 3.0
 
-Usage:
-  python repose_search.py --pdb INPUT.pdb --lig FMN --out OUTPUT.pdb \
-      --flagged 44,51,106 --max_drift 3.0
-  python repose_search.py --pdb INPUT.pdb --lig U10 --out OUTPUT.pdb \
-      --flagged 9,67 --max_drift 3.0
-"""
 import argparse, itertools, sys
 import numpy as np
 from Bio.PDB import PDBParser, PDBIO, Select
@@ -23,7 +19,7 @@ RING_ATOMS = {
     "FMN": {"C1","C2","C3","C4","C5","C6","C7","C8","C9","N1","N2","N3","N4"},
     "U10": {"C1","C2","C3","C4","C5","C6","C7","C8","O1","O2","O3","O4"},
 }
-COORD_HIS = [9, 67]   # His coordinating the swapped-cofactor site
+COORD_HIS = [9, 67] # His coordinating the swapped-cofactor site
 
 def heavy(atom): return atom.element != "H"
 
