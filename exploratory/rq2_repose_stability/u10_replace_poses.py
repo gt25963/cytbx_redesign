@@ -1,7 +1,9 @@
 #!/usr/bin/env python3
-"""
-u10_replace_poses.py  (RQ2, U10 track - re-placement)
-"""
+# u10_replace_poses.py  (RQ2, U10 track - re-placement)
+
+# NOTE: Part of the earlier, discontinued rigid-body geometric placement approach, and specific to the discarded U10/Q10 quinone naming (superseded by Q8, the correct native E. coli quinone). 
+# Not part of the reported pipeline; kept for reference only. 
+# fmn_replace_poses.py is the equivalent script for the FMN cofactor.
 
 import argparse
 import os
@@ -11,27 +13,31 @@ from fmn_common import (read_atoms, atoms_by_name, centroid,
                         best_fit_plane_normal, apply_transform,
                         write_transformed_ligand)
 
+# U10's redox-active quinone head-group atoms (equivalent role to FMN's isoalloxazine ring in fmn_replace_poses.py), used as the alignment target
 HEAD_ATOMS = ["C1", "C2", "C3", "C4", "C5", "C6", "C7", "C8", "C9",
               "O1", "O2", "O3", "O4"]
 HBOND_EDGE_ATOMS = ["O1", "O2"]
 
 
 def rotation_between(a, b):
+    # Rotation matrix that maps vector a onto vector b, via Rodrigues' formula
     a = a / np.linalg.norm(a); b = b / np.linalg.norm(b)
     v = np.cross(a, b); s = np.linalg.norm(v); c = np.dot(a, b)
+    # a and b are parallel/antiparallel: cross product is undefined, handle directly
     if s < 1e-8:
         return np.eye(3) if c > 0 else -np.eye(3)
     vx = np.array([[0, -v[2], v[1]], [v[2], 0, -v[0]], [-v[1], v[0], 0]])
     return np.eye(3) + vx + vx @ vx * ((1 - c) / (s ** 2))
 
-
 def rodrigues(axis, angle_rad):
+    # Standard Rodrigues' rotation formula: rotate by angle_rad around a given axis
     k = axis / np.linalg.norm(axis)
     K = np.array([[0, -k[2], k[1]], [k[2], 0, -k[0]], [-k[1], k[0], 0]])
     return np.eye(3) + np.sin(angle_rad) * K + (1 - np.cos(angle_rad)) * (K @ K)
 
 
 def pose1_geometric(lig_atoms, hemc_coords):
+    # Baseline pose: align U10's head-group plane onto Hem2's ring plane, then translate head centroid onto haem centroid
     lig = atoms_by_name(lig_atoms)
     head = [lig[n] for n in HEAD_ATOMS if n in lig]
     head_c = centroid(head)
@@ -45,6 +51,7 @@ def pose1_geometric(lig_atoms, hemc_coords):
 
 def sweep_best_pose(lig_atoms, hemc_coords, clash_ca, angle_step_deg=5,
                     include_flip=True):
+    # Brute-force search over in-plane rotation angle (and optionally a 180-degree flip) to find the orientation that maximises minimum distance to nearby clash-prone Ca atoms - i.e. the least clashing pose
     lig = atoms_by_name(lig_atoms)
     lig_names = list(lig.keys())
     lig_coords0 = np.array([lig[n] for n in lig_names])
@@ -56,6 +63,7 @@ def sweep_best_pose(lig_atoms, hemc_coords, clash_ca, angle_step_deg=5,
     head_c_target = apply_transform([head_c0], R0, t0)[0]
     head_n = best_fit_plane_normal(apply_transform(head, R0, t0))
 
+    # Build an arbitrary axis lying within the head-group plane to flip around (falls back to a second candidate if the first is parallel to head_n)
     arbitrary = np.array([1.0, 0.0, 0.0])
     inplane = arbitrary - np.dot(arbitrary, head_n) * head_n
     if np.linalg.norm(inplane) < 1e-6:
@@ -63,6 +71,7 @@ def sweep_best_pose(lig_atoms, hemc_coords, clash_ca, angle_step_deg=5,
         inplane = arbitrary - np.dot(arbitrary, head_n) * head_n
     flip_axis = inplane / np.linalg.norm(inplane)
 
+    # Score = worst-case (minimum) distance from any U10 atom to any clash Ca - higher is better (further from clashing residues)
     def score_for(R, t):
         moved = apply_transform(lig_coords0, R, t)
         worst = float("inf")
@@ -75,6 +84,7 @@ def sweep_best_pose(lig_atoms, hemc_coords, clash_ca, angle_step_deg=5,
     results = []
     best_score, best_R, best_t, best_deg, best_flip = -1.0, None, None, None, None
 
+    # Grid search over flip x rotation angle, keeping the single best-scoring pose
     for flip in flips:
         Rflip = rodrigues(flip_axis, np.pi) if flip else np.eye(3)
         for deg in range(0, 360, angle_step_deg):
@@ -88,9 +98,9 @@ def sweep_best_pose(lig_atoms, hemc_coords, clash_ca, angle_step_deg=5,
 
     return best_R, best_t, best_score, best_deg, best_flip, results
 
-
 def sweep_translate(lig_atoms, hemc_coords, clash_ca, base_deg, base_flip,
                     extent=1.5, step=0.25):
+    # Given a fixed rotation, brute-force search a small 3D translation grid around it for further clash reduction
     lig = atoms_by_name(lig_atoms)
     lig_coords0 = np.array([lig[n] for n in lig.keys()])
 
@@ -108,6 +118,7 @@ def sweep_translate(lig_atoms, hemc_coords, clash_ca, base_deg, base_flip,
         inplane = arbitrary - np.dot(arbitrary, head_n) * head_n
     flip_axis = inplane / np.linalg.norm(inplane)
 
+    # Rebuild the fixed rotation from the chosen angle/flip
     Rflip = rodrigues(flip_axis, np.pi) if base_flip else np.eye(3)
     Rrot = rodrigues(head_n, np.radians(base_deg))
     R = Rrot @ Rflip @ R0
@@ -121,6 +132,7 @@ def sweep_translate(lig_atoms, hemc_coords, clash_ca, base_deg, base_flip,
             worst = min(worst, d)
         return worst
 
+    # Exhaustive dx/dy/dz grid search within +/- extent at the given step size
     offsets = np.arange(-extent, extent + 1e-9, step)
     results = []
     best_score, best_t, best_off = -1.0, None, None
@@ -135,8 +147,8 @@ def sweep_translate(lig_atoms, hemc_coords, clash_ca, base_deg, base_flip,
 
     return R, best_t, best_score, best_off, results
 
-
 def report_clash_distances(out_pdb, clash_chain, clash_residues):
+    # Prints minimum Ca-to-U10 distance at each specified clash-prone residue
     lig_coords = [a["xyz"] for a in read_atoms(out_pdb, want_resname="U10")]
     ca = {}
     for a in read_atoms(out_pdb, want_chain=clash_chain):
@@ -149,7 +161,6 @@ def report_clash_distances(out_pdb, clash_chain, clash_residues):
             continue
         d = min(np.linalg.norm(ca[r] - m) for m in lig_coords)
         print(f"      res{r}: {d:.2f} A")
-
 
 def main():
     ap = argparse.ArgumentParser()
@@ -182,6 +193,7 @@ def main():
 
     print(f"U10 atoms: {len(lig_atoms)} | HEM_C ref atoms: {len(hemc_coords)}")
 
+    # Four mutually exclusive modes, in order of precedence: manual single-pose dump at a given angle, fine-grained translation sweep (needs a fixed angle from a prior --sweep run), rotation/flip sweep, or the default single geometric pose
     if args.dump_angle is not None:
         head = atoms_by_name(lig_atoms)
         head_pts = [head[n] for n in HEAD_ATOMS if n in head]
@@ -260,6 +272,7 @@ def main():
         print(f"[sweep] -> {out}")
         report_clash_distances(out, args.clash_chain, args.clash_residues)
 
+        # Optional: list every angle clearing a given distance threshold, instead of just the top 5, for manually scanning viable candidates
         if args.show_all_above is not None:
             passing = [r for r in results if r[2] >= args.show_all_above]
             passing.sort(key=lambda r: r[0])
@@ -274,6 +287,7 @@ def main():
                 print(f"    angle={deg_r:3d} flip={flip_r}  worst_d={s_r:.2f} A")
         return
 
+    # Default mode: just write out the single baseline geometric pose
     R1, t1 = pose1_geometric(lig_atoms, hemc_coords)
     out1 = os.path.join(args.outdir, "u10_pose1_geometric.pdb")
     write_transformed_ligand(args.swap, out1, "U10", R1, t1)
