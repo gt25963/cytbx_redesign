@@ -17,7 +17,7 @@ rather than included individually, to avoid repetition.
   sweep example.
 - **Mutation fix variants**: tested fixY75 and fixY75L73 (C2). fixY75 is
   kept as a representative example; fixY75L73 follows the same approach
-  with an additional fixed residue (see Results 1.2, "Position 75" finding).
+  with an additional fixed residue.
 - **Docking-pose variants**: tested top1, top2 (main pipeline default), top3,
   v2, and the unlettered base configuration for both C2 and C3. top1 is
   kept as a representative example for each state.
