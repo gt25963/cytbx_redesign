@@ -1,24 +1,16 @@
 #!/usr/bin/env bash
-# dos2unix master_cytbx_4tool_C3.sh if edited on Windows
 
-# ============================================================
-# CytbX 4-Tool Combined Pipeline -- RQ1 -- C3 Cycle 1
+# CytbX Multi-Tool Combined Pipeline - RQ1 - C3 Trimer
 # Mirrors master_cytbx_4tool.sh (C2) exactly, with:
-#   - starting structure: C3/holo/top3_holo.pdb (trimer)
-#   - protein_chain_count=3 throughout scoring (Step 7)
-#   - uses the CHAIN-COLLISION-FIXED mpnn_to_boltz2.sh
-#   - Step 7 uses protein-protein-specific scores (pair_chains_iptm
-#     for Boltz-2, per_chain_pair_iptm from .npz for Chai-1), not
-#     the inflated all-chain-pair summaries
-#   - writes next_cycle_seeds.csv / .txt as a durable per-track
-#     selection artifact
-#
-# Residue selection for the trimer (already run today):
-#   FIXED=A9 A37 A67 A95 B9 B37 B67 B95 C9 C37 C67 C95
-#   INTERFACE=A66 A73 A76 A77 A79 A80 A81 A83 A84 A87 A88 A89 A90
-#     A91 A92 A93 A94 A96 A97 A98 A99 A100 A101 A103 A104 A105 A108
-#     A111 A113 [B.../C... mirrored]
-# ============================================================
+## starting structure: C3/holo/top3_holo.pdb (trimer)
+## protein_chain_count=3 throughout scoring (Step 7)
+## uses the CHAIN-COLLISION-FIXED mpnn_to_boltz2.sh
+
+# Residue selection for the trimer:
+## FIXED=A9 A37 A67 A95 B9 B37 B67 B95 C9 C37 C67 C95
+## INTERFACE=A66 A73 A76 A77 A79 A80 A81 A83 A84 A87 A88 A89 A90
+#            A91 A92 A93 A94 A96 A97 A98 A99 A100 A101 A103 A104 A105 A108
+#            A111 A113 [B.../C... mirrored]
 
 set -u
 
@@ -42,7 +34,7 @@ total_sequences=200
 boltz_samples=2
 top_n_for_chai_af3=50
 protein_chain_count=3
-i=3
+i=3 # cycle number - script is run once, not looped
 
 echo "4-tool pipeline (C3) starting at $(timestamp)"
 mkdir -p "${exec_directory}/cycle_${i}/LigandMPNN/inputs"
@@ -124,7 +116,7 @@ while true; do
 done
 cp "${fasta_file}" "${trajectory_path}/cycle_${i}/"
 
-echo "step 3: converting FASTA to Boltz-2 YAML (chain-collision-fixed) at $(timestamp)"
+echo "step 3a: converting FASTA to Boltz-2 YAML (chain-collision-fixed) at $(timestamp)"
 bash "${boltz_input_path}/mpnn_to_boltz2.sh" \
     "${fasta_file}" \
     -l "${ligand}:${num_ligands}" \
@@ -167,15 +159,10 @@ while true; do
     sleep 30
 done
 
-echo "step 4: scoring Boltz-2 outputs at $(timestamp)"
+echo "step 4a: scoring Boltz-2 outputs at $(timestamp)"
 
 "${biopython_python}" - << EOF
 import json, csv, glob, os
-# FIXED 2026-06-24: previously used Boltz-2's top-level 'iptm', which
-# averages across ALL chain pairs (protein + ligand) and is inflated by
-# confident haem placement. Now extracts pair_chains_iptm[i][j] for the
-# actual protein-protein pair(s), matching Step 7's corrected metric.
-# protein_chain_count=3 for this C3 trimer (all three unique pairs averaged).
 protein_chain_count = ${protein_chain_count}
 
 def protein_pair_indices(n):
@@ -346,6 +333,8 @@ else
     echo "AF3 array complete at $(timestamp): all ${#numeric_ids[@]} ids present"
 fi
 
+# Compiles all tools' scores and reports winning id under each of the track definitions.
+# Next cycle seed is chosen manually from this output after expert-in-the-loop inspection.
 echo "step 7: compiling CORRECTED scores and selecting next-cycle seeds at $(timestamp)"
 
 "${biopython_python}" - << EOF
