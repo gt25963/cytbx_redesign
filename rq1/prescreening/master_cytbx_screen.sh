@@ -1,31 +1,29 @@
 #!/usr/bin/env bash
-# dos2unix master_cytbx_screen.sh if edited on Windows
 
-# ============================================================
-# CytbX Oligomeric State Screening — Pre-pipeline Phase
+# CytbX Oligomeric State Screening - Pre-pipeline Phase
 # RPXDock (C2/C3/C4/C5) -> LigandMPNN -> Boltz-2 + ESM3
 # Selects best oligomeric state for full iterative pipeline
-# ============================================================
+# This script feeds into data for Table 1, Results 1.1
 
 set -u
 
-# --- DIRECTORIES ---
+# DIRECTORIES
 home_directory="/home/b5ae/mvg2713124.b5ae"
 scratch_directory="/scratch/b5ae/mvg2713124.b5ae"
 work_directory="${scratch_directory}/cytbx_pipeline"
 screen_directory="${work_directory}/oligomer_screen"
 trajectory_path="${screen_directory}/screen_trajectory"
 
-# --- PYTHON PATHS ---
+# PYTHON PATHS
 biopython_python="${home_directory}/miniconda3/envs/biopython/bin/python"
 
-# --- UTILITIES ---
+# UTILITIES
 timestamp() { date +"%F_%T"; }
 
-# --- INPUT ---
+# INPUT
 cytbx_monomer="/home/b5ae/mvg2713124.b5ae/cytbx_redesign/CytbX.pdb"
 
-# --- PARAMETERS ---
+# PARAMETERS
 oligomeric_states=(2 3 4 5)
 rpxdock_top_n=3
 ligand=HEM
@@ -35,13 +33,10 @@ total_sequences=20
 boltz_samples=2
 ipsae_cutoff=15
 
-# --- RPXDOCK PATHS ---
+# RPXDOCK PATHS
 hscore_dir="${home_directory}/miniconda3/envs/rpxdock/lib/python3.12/site-packages/rpxdock/data/hscore"
 
-# ============================================================
 # FOLDER SETUP
-# ============================================================
-
 echo "screening pipeline starting at $(timestamp)"
 mkdir -p "${screen_directory}"
 mkdir -p "${trajectory_path}"
@@ -64,11 +59,8 @@ done
 
 echo "folders ready at $(timestamp)"
 
-# ============================================================
-# PHASE 1: RPXDOCK — ALL STATES IN PARALLEL
-# ============================================================
-
-echo "phase 1: running RPXDock for all oligomeric states at $(timestamp)"
+# PART 1: RPXDOCK - ALL STATES IN PARALLEL
+echo "part 1: running RPXDock for all oligomeric states at $(timestamp)"
 
 for state in "${oligomeric_states[@]}"; do
     echo "submitting RPXDock C${state}"
@@ -83,7 +75,7 @@ for state in "${oligomeric_states[@]}"; do
     while true; do
         n_pdbs=$(find "${screen_directory}/C${state}/rpxdock" -name "*.pdb" 2>/dev/null | wc -l)
         if [ "${n_pdbs}" -ge "${rpxdock_top_n}" ]; then
-            echo "RPXDock C${state} complete — ${n_pdbs} structures"
+            echo "RPXDock C${state} complete - ${n_pdbs} structures"
             break
         else
             echo "waiting for RPXDock C${state}... ${n_pdbs}/${rpxdock_top_n}"
@@ -94,15 +86,14 @@ done
 
 echo "all RPXDock runs complete at $(timestamp)"
 
-# ============================================================
-# PHASE 2: ADD HAEMS + LIGANDMPNN + BOLTZ-2 + ESM3
-# ============================================================
+# PART 2: ADD HAEMS + LIGANDMPNN + BOLTZ-2 + ESM3
 
 for state in "${oligomeric_states[@]}"; do
 
     echo "processing C${state} at $(timestamp)"
-    num_ligands=$(( state * 2 ))
+    num_ligands=$(( state * 2 )) ## 2 haems per subunit
 
+    ## take the top N RPXDock poses for this state, skipping raw "job0" output file
     top_pdbs=$(ls "${screen_directory}/C${state}/rpxdock/"cytbx_C${state}*top*.pdb 2>/dev/null | \
         grep -v "job0" | sort | head -${rpxdock_top_n})
 
@@ -113,6 +104,7 @@ for state in "${oligomeric_states[@]}"; do
 
         holo_pdb="${screen_directory}/C${state}/holo/top${j}_holo.pdb"
 
+        ## RPXDock poses are apo (backbone only) - haems are added back in from the reference monomer before any design/scoring can proceed
         "${biopython_python}" "${work_directory}/scripts/add_haem_to_trimer.py" \
             "${pdb}" \
             "${cytbx_monomer}" \
@@ -192,9 +184,7 @@ for state in "${oligomeric_states[@]}"; do
     done
 done
 
-# ============================================================
 # WAIT FOR ALL BOLTZ-2 AND ESM3
-# ============================================================
 
 echo "waiting for all Boltz-2 and ESM3 runs to complete..."
 
@@ -228,11 +218,9 @@ for state in "${oligomeric_states[@]}"; do
     done
 done
 
-# ============================================================
-# PHASE 3: SCORE AND SELECT BEST OLIGOMERIC STATE
-# ============================================================
+# PART 3: SCORE AND SELECT BEST OLIGOMERIC STATE
 
-echo "phase 3: scoring and selecting best oligomeric state at $(timestamp)"
+echo "part 3: scoring and selecting best oligomeric state at $(timestamp)"
 
 echo "state,top_n,boltz_score,esm3_ptm,combined_score" > "${trajectory_path}/screen_scores.csv"
 
@@ -293,11 +281,9 @@ best_state=$(awk -F',' 'NR==2 {print $1}' "${trajectory_path}/screen_scores.csv"
 best_top=$(awk -F',' 'NR==2 {print $2}' "${trajectory_path}/screen_scores.csv")
 best_score=$(awk -F',' 'NR==2 {print $5}' "${trajectory_path}/screen_scores.csv")
 
-echo "============================================================"
 echo "SCREENING COMPLETE at $(timestamp)"
 echo "Best oligomeric state: ${best_state} (${best_top}) with combined score ${best_score}"
 echo "Use ${best_state} for full iterative pipeline in master_cytbx_rq1.sh"
-echo "============================================================"
 
 cp "${trajectory_path}/screen_scores.csv" "${work_directory}/"
 echo "Screen scores saved to ${work_directory}/screen_scores.csv"
