@@ -1,6 +1,8 @@
 #!/usr/bin/env bash
 # Rescore existing screening outputs and generate screen_scores_updated.csv
 
+# Rescores the original C2-C5 oligomer screening outputs (Table 1), reading the "iptm" field instead of "protein_iptm" - the latter is always 0.0 for these multi-chain ligand-containing structures.
+
 set -u
 
 home_directory="/home/b5ae/mvg2713124.b5ae"
@@ -41,10 +43,12 @@ for state in "${oligomeric_states[@]}"; do
 
             json_file=$(find "${seq_dir}" -name "confidence_*.json" 2>/dev/null | head -1)
             confidence_score=$(grep -oP '(?<="confidence_score": )[-+]?[0-9]*\.?[0-9]+' "${json_file}")
+            ## corrected field: "iptm", not "protein_iptm" (always 0.0 for these structures)
             protein_iptm=$(grep -oP '(?<="iptm": )[-+]?[0-9]*\.?[0-9]+' "${json_file}")
             ipsae_score=$(awk '$5 == "max" && $6 != "" {sum += $6; count++} \
                 END {if (count > 0) printf "%.4f", sum/count}' \
                 "${seq_dir}"/*_"${ipsae_cutoff}"_*.txt 2>/dev/null)
+            ## fall back to 0.0 if ipSAE produced no rows (e.g. no residues within cutoff)
             ipsae_score=${ipsae_score:-0.0}
             calculated_average=$(printf "%.4f" \
                 "$(echo "scale=6; ($confidence_score + $protein_iptm + (1.5 * $ipsae_score)) / 3" | bc -l)")
@@ -59,7 +63,8 @@ for state in "${oligomeric_states[@]}"; do
             "${boltz_output}/scores_file.csv" \
             "${esm3_output}/esm3_scores.csv" \
             "${boltz_output}/combined_scores.csv"
-
+       
+        ## take just the top-ranked row's scores as this pose's representative score
         top_combined=$(awk -F',' 'NR==2 {print $4}' "${boltz_output}/combined_scores.csv")
         top_boltz=$(awk -F',' 'NR==2 {print $2}' "${boltz_output}/combined_scores.csv")
         top_esm3=$(awk -F',' 'NR==2 {print $3}' "${boltz_output}/combined_scores.csv")
@@ -76,10 +81,8 @@ best_state=$(awk -F',' 'NR==2 {print $1}' "${trajectory_path}/screen_scores_upda
 best_top=$(awk -F',' 'NR==2 {print $2}' "${trajectory_path}/screen_scores_updated.csv")
 best_score=$(awk -F',' 'NR==2 {print $5}' "${trajectory_path}/screen_scores_updated.csv")
 
-echo "============================================================"
 echo "SCREENING COMPLETE"
 echo "Best oligomeric state: ${best_state} (${best_top}) with combined score ${best_score}"
-echo "============================================================"
 
 cp "${trajectory_path}/screen_scores_updated.csv" "${work_directory}/"
 echo "Screen scores saved to ${work_directory}/screen_scores_updated.csv"
