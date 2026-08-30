@@ -7,5 +7,7 @@
 #SBATCH --output=/scratch/b5ae/mvg2713124.b5ae/cytbx_pipeline/logs/screen_%j.out
 #SBATCH --account=brics.b5ae
 
+# run_screen.sh
+# wraps the screening .sh in a sbatch job so full C2-C5 state screening pipeline runs on compute node.
 source /home/b5ae/mvg2713124.b5ae/miniconda3/etc/profile.d/conda.sh
 bash /scratch/b5ae/mvg2713124.b5ae/cytbx_pipeline/master_cytbx_screen.sh
