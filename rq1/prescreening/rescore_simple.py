@@ -1,8 +1,11 @@
 #!/usr/bin/env python3
-"""
-Simple rescoring using mean Boltz confidence and mean ESM3 pTM per structure.
-No ID matching required.
-"""
+
+# Simple rescoring using mean Boltz confidence and mean ESM3 pTM per structure.
+# No ID matching required.
+# This is cross-state comparison script referenced in the Methods. 
+# The raw averaged confidence scores across every sequence in a batch.
+# This is used rather than picking only one top-ranked sequence or relying on the ipSAE/iptm fields.
+
 import csv
 import os
 import glob
@@ -42,6 +45,7 @@ for state in [2, 3, 4, 5]:
         results.append((f"C{state}", f"top{j}", mean_boltz, mean_esm3, combined))
         print(f"C{state} top{j}: boltz={mean_boltz:.4f} esm3={mean_esm3:.4f} combined={combined:.4f}")
 
+# rank all state x pose combinations together
 results.sort(key=lambda x: x[4], reverse=True)
 
 with open(output_file, "w", newline="") as f:
