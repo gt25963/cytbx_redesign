@@ -1,7 +1,10 @@
 #!/usr/bin/env bash
 
-# CytbX Oligomeric Redesign Pipeline - RQ1 
+# CytbX Oligomeric Redesign Pipeline - RQ1 - Prescreening
 # RPXDock -> LigandMPNN -> Boltz-2 (all) -> ESM3 (all) -> AF3 -> Chai-1 (top N)
+
+# One-cycle prescreening pass used to rank oligomeric states (C2/C3/C4/C5) before committing to the full multi-cycle iterative pipeline. 
+# Scoring here uses a simpler combined metric (confidence_score + protein_iptm + ipSAE) rather than the corrected per-chain-pair ipTM used in the main pipeline.
 
 set -euo pipefail
 
@@ -22,34 +25,33 @@ timestamp() {
 }
 
 # STARTING STRUCTURE
-# RPXDock output of CytbX oligomer — .cif preferred, .pdb will be auto-converted
+# RPXDock output of CytbX oligomer - .cif preferred, .pdb will be auto-converted
 initial_structure="rpx_trimer_holo.pdb"
 
 # OLIGOMER PARAMETERS
-oligomeric_state=3    # C3 trimer
+oligomeric_state=3 ## C3 trimer
 ligand=HEM
-num_ligands=6         # 2 haem per subunit x 3 subunits
+num_ligands=6 ## 2 haem per subunit x 3 subunits
 
 # DESIGN PARAMETERS
-number_of_iterations=3    # number of full redesign cycles
-total_sequences=20        # LigandMPNN sequences generated per cycle
+number_of_iterations=3 ## number of full redesign cycles
+total_sequences=20 ## ligandMPNN sequences generated per cycle
 
 # LIGANDMPNN
 mpnn_model_type="global_label_membrane_mpnn"
-mpnn_temp=0.1             # increase if sequence diversity is too low
-mpnn_bias_for=""          # fill if biasing toward certain residues
+mpnn_temp=0.2 ## increase if sequence diversity is too low
+mpnn_bias_for="" ## fill if biasing toward certain residues
 mpnn_bias_against=""
-fixed_residues=""         # haem-coordinating His residues from geometry script - e.g. A1,A5,..."
+fixed_residues="" ## haem-coordinating His residues from geometry script (e.g. A1)
 
 # STRUCTURE PREDICTION
-boltz_samples=2           # Boltz-2 models per sequence — fast filter
-top_n_for_af3_chai=3      # top sequences passed to AF3 + Chai-1
-af3_samples=5             # AF3 models per top sequence
-chai_samples=5            # Chai-1 models per top sequence
+boltz_samples=2 ## Boltz-2 models per sequence - fast filter
+top_n_for_af3_chai=3 ## top sequences passed to AF3 + Chai-1
+af3_samples=5 ## AF3 models per top sequence
+chai_samples=5 ## Chai-1 models per top sequence
 
 # SCORING
-ipsae_cutoff=15           # angstrom cutoff for interface ipSAE
-
+ipsae_cutoff=15 ## angstrom cutoff for interface ipSAE
 
 # FOLDER SETUP
 echo "pipeline starting at $(timestamp)"
@@ -118,9 +120,7 @@ mkdir -p "${work_directory}/logs"
 
 echo "scripts copied into cycle folders at $(timestamp)"
 
-# =======================
 # MAIN ITERATION LOOP
-# =======================
 
 echo "iteration starting at $(timestamp)"
 echo "iteration starting at $(timestamp)" >> "${trajectory_path}/timestamps.txt"
@@ -188,7 +188,7 @@ for i in $(seq 1 $number_of_iterations); do
         fi
         current_lines=$(wc -l < "${fasta_file}")
         if [ "${current_lines}" -ge "${desired_lines}" ]; then
-            echo "MPNN complete — FASTA ready at $(timestamp)"
+            echo "MPNN complete - FASTA ready at $(timestamp)"
             break
         else
             echo "FASTA not complete yet (${current_lines}/${desired_lines} lines)..."
@@ -214,8 +214,8 @@ for i in $(seq 1 $number_of_iterations); do
         "${boltz_output_path}" \
         "${boltz_samples}"
 
-    # STEP 4b: ESM3 structure prediction (all seqs) — parallel with Boltz-2
-    echo "step 4b: running ESM3 on all ${total_sequences} sequences at $(timestamp)"
+    # ESM3 structure prediction (all seqs) - parallel with Boltz-2
+    echo "running ESM3 on all ${total_sequences} sequences at $(timestamp)"
     cp "${fasta_file}" "${esm3_input_path}/"
     sbatch "${work_directory}/submit_esm3.sh" \
         "${i}" \
@@ -232,7 +232,7 @@ for i in $(seq 1 $number_of_iterations); do
     while true; do
         current_cifs=$(find "${boltz_output_path}" -name "*.cif" | wc -l)
         if [ "${current_cifs}" -ge "${total_boltz_cifs}" ]; then
-            echo "Boltz-2 complete — ${current_cifs} cifs at $(timestamp)"
+            echo "Boltz-2 complete - ${current_cifs} cifs at $(timestamp)"
             break
         else
             echo "Boltz-2 running... ${current_cifs}/${total_boltz_cifs} cifs"
@@ -254,6 +254,7 @@ for i in $(seq 1 $number_of_iterations); do
     done
 
     # STEP 5: Score Boltz-2 Outputs
+    # NOTE: protein_iptm is always 0.0 for multi-chain ligand-containing structures (known Boltz-2 field limitation), so calculated_average is effectively driven by confidence_score and ipSAE only. Main iterative pipeline uses the corrected per-chain-pair ipTM instead.
     echo "step 5: scoring Boltz-2 outputs at $(timestamp)"
     echo "id,confidence_score,protein_iptm,ipSAE,calculated_average" \
         > "${boltz_output_path}/scores_file.csv"
@@ -267,7 +268,7 @@ for i in $(seq 1 $number_of_iterations); do
         cif_file=$(find "${seq_dir}" -name "*.cif" | head -1)
 
         if [ -z "${pae_file:-}" ] || [ -z "${cif_file:-}" ]; then
-            echo "skipping ${seq_id} — missing pae or cif"
+            echo "skipping ${seq_id} - missing pae or cif"
             continue
         fi
 
@@ -295,7 +296,7 @@ for i in $(seq 1 $number_of_iterations); do
     cp "${boltz_output_path}/scores_file.csv" "${trajectory_path}/cycle_${i}/"
     echo "Boltz-2 scoring complete at $(timestamp)"
 
-    # STEP 6: COmbine Boltz-2 and ESM3 Scores - select top N 
+    # STEP 6: Combine Boltz-2 and ESM3 Scores - select top N 
     echo "step 6: combining Boltz-2 and ESM3 scores at $(timestamp)"
 
     source "${home_directory}/miniconda3/etc/profile.d/conda.sh"
@@ -345,7 +346,7 @@ for i in $(seq 1 $number_of_iterations); do
     while true; do
         current_af3=$(find "${af3_output_path}" -name "*.cif" | wc -l)
         if [ "${current_af3}" -ge "${total_af3_cifs}" ]; then
-            echo "AF3 complete — ${current_af3} cifs at $(timestamp)"
+            echo "AF3 complete - ${current_af3} cifs at $(timestamp)"
             break
         else
             echo "AF3 running... ${current_af3}/${total_af3_cifs} cifs"
@@ -358,7 +359,7 @@ for i in $(seq 1 $number_of_iterations); do
     # STEP 8: Chai-1 Prediction (Top N)
     echo "step 8: running Chai-1 on top ${top_n_for_af3_chai} sequences at $(timestamp)"
 
-    # prepare chai input fasta — top N sequences only
+    # prepare chai input fasta - top N sequences only
     top_ids_pattern=$(printf "|id=%s" "${top_ids[@]}")
     top_ids_pattern="${top_ids_pattern:1}"
     grep -A1 -E "(${top_ids_pattern})" "${fasta_file}" \
@@ -377,7 +378,7 @@ for i in $(seq 1 $number_of_iterations); do
     while true; do
         current_chai=$(find "${chai_output_path}" -name "*.cif" | wc -l)
         if [ "${current_chai}" -ge "${total_chai_cifs}" ]; then
-            echo "Chai-1 complete — ${current_chai} cifs at $(timestamp)"
+            echo "Chai-1 complete - ${current_chai} cifs at $(timestamp)"
             break
         else
             echo "Chai-1 running... ${current_chai}/${total_chai_cifs} cifs"
@@ -403,7 +404,7 @@ for i in $(seq 1 $number_of_iterations); do
         echo "cycle ${i} complete at $(timestamp)" >> "${trajectory_path}/timestamps.txt"
     else
         cp "${top_cif}" "${trajectory_path}/cycle_${i}/top_scoring_final.cif"
-        echo "final cycle complete — top structure saved to trajectory"
+        echo "final cycle complete - top structure saved to trajectory"
         echo "pipeline complete at $(timestamp)" >> "${trajectory_path}/timestamps.txt"
     fi
 
