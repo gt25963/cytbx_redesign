@@ -1,33 +1,12 @@
 #!/usr/bin/env bash
-# dos2unix master_cytbx_4tool.sh if edited on Windows
 
-# ============================================================
-# CytbX 4-Tool Combined Pipeline -- RQ1 -- Cycle 1 (CORRECTED 2026-06-24)
-# Three fixes applied vs the original version (backed up as
-# master_cytbx_4tool.sh.bak_20260624):
-#   1. Uses the chain-collision-fixed mpnn_to_boltz2.sh -- the original
-#      had a ligand-chain-letter collision with the second protein chain,
-#      causing Boltz-2 to silently model the monomer instead of the dimer
-#      in every prior run that used it.
-#   2. Step 5's Chai-1 completion check no longer trusts
-#      highest_aggregate_scores.csv (found unreliable as a completeness
-#      signal); checks for the actual per-model .npz files instead.
-#   3. Step 7 extracts protein-protein-specific scores directly:
-#      Boltz-2's pair_chains_iptm[i][j], Chai-1's per_chain_pair_iptm
-#      from the .npz files -- instead of the inflated all-chain-pair
-#      summaries the original script used (confirmed via id78: summary
-#      iptm=0.74 vs real protein-pair iptm=0.64). Adds Track 4 (rank-sum
-#      consensus) and Track 5 (Chai-1 only) alongside the original three
-#      tracks, and writes a durable next_cycle_seeds.csv/.txt selection
-#      artifact instead of relying on console output alone.
-#
-# protein_chain_count=2 throughout (C2 dimer). Starting structure
-# unchanged: C2/holo/top2_holo.pdb.
-# ============================================================
+# CytbX 4-Tool Combined Pipeline - RQ1 - Cycle 4 (id99) 
+# Exactly the same as the master_cytbx_4tool_id177.sh except different starting pdb. 
+# Starting structure: id99 lineage
 
 set -u
 
-# --- DIRECTORIES ---
+# DIRECTORIES
 home_directory="/home/b5ae/mvg2713124.b5ae"
 scratch_directory="/scratch/b5ae/mvg2713124.b5ae"
 work_directory="${scratch_directory}/cytbx_pipeline"
@@ -38,10 +17,10 @@ biopython_python="${home_directory}/miniconda3/envs/biopython/bin/python"
 
 timestamp() { date +"%F_%T"; }
 
-# --- STARTING STRUCTURE ---
+# STARTING STRUCTURE
 initial_structure="main_pipeline/CytbX_4tool/cycle_4_seed_id99.pdb"
 
-# --- PARAMETERS ---
+# PARAMETERS
 ligand=HEM
 num_ligands=4
 mpnn_model_type="global_label_membrane_mpnn"
@@ -52,9 +31,7 @@ top_n_for_chai_af3=50
 protein_chain_count=2
 i=4
 
-# ============================================================
 # FOLDER SETUP
-# ============================================================
 
 echo "4-tool pipeline starting at $(timestamp)"
 mkdir -p "${exec_directory}/cycle_${i}/LigandMPNN/inputs"
@@ -98,9 +75,7 @@ cp "${work_directory}/scripts/surface_area.py" "${boltz_output_path}/"
 
 echo "folders and starting structure ready at $(timestamp)"
 
-# ============================================================
 # STEP 1: SELECT INTERFACE RESIDUES
-# ============================================================
 echo "step 1: selecting interface residues at $(timestamp)"
 cd "${mpnn_input_path}"
 "${biopython_python}" biopython_selection.py top_scoring.cif > selection_output.txt
@@ -110,9 +85,7 @@ echo "fixed: ${fixed_residues}"
 echo "interface: ${interface_residues}"
 cd "${work_directory}"
 
-# ============================================================
 # STEP 2: LIGANDMPNN (200 sequences, high-mem)
-# ============================================================
 echo "step 2: running LigandMPNN at $(timestamp)"
 sbatch "${work_directory}/submit_mpnn_highmem.sh" \
     "4tool_cycle${i}" \
@@ -142,10 +115,8 @@ while true; do
 done
 cp "${fasta_file}" "${trajectory_path}/cycle_${i}/"
 
-# ============================================================
 # STEP 3: BOLTZ-2 + ESM3 ON ALL 200
-# ============================================================
-echo "step 3: converting FASTA to Boltz-2 YAML (chain-collision-fixed) at $(timestamp)"
+echo "step 3a: converting FASTA to Boltz-2 YAML (chain-collision-fixed) at $(timestamp)"
 bash "${boltz_input_path}/mpnn_to_boltz2.sh" \
     "${fasta_file}" \
     -l "${ligand}:${num_ligands}" \
@@ -188,25 +159,12 @@ while true; do
     sleep 30
 done
 
-# ============================================================
 # STEP 4: SCORE BOLTZ-2, COMBINE WITH ESM3, SELECT TOP 50
-#
-# NOTE: this top-50 prefilter selection still uses a simple
-# confidence_score + iptm average for RANKING WHICH 50 ADVANCE -- it is
-# NOT the same as Step 7's final scoring below, which uses corrected
-# protein-pair metrics. This is left as a fast prefilter intentionally;
-# flag with Paul if you also want the top-50 cut itself corrected.
-# ============================================================
+
 echo "step 4: scoring Boltz-2 outputs at $(timestamp)"
 
 "${biopython_python}" - << EOF
 import json, csv, glob, os
-# FIXED 2026-06-24: previously used Boltz-2's top-level 'iptm', which
-# averages across ALL chain pairs (protein + ligand) and is inflated by
-# confident haem placement -- same issue documented and fixed for Step 7.
-# Now extracts pair_chains_iptm[i][j] for the actual protein-protein
-# pair(s), matching Step 7's corrected metric. This changes WHICH 50
-# sequences advance to Chai-1/AF3, not just how the final report reads.
 protein_chain_count = ${protein_chain_count}
 
 def protein_pair_indices(n):
@@ -271,9 +229,7 @@ done < "${boltz_output_path}/combined_scores.csv"
 
 echo "top ${#top_ids[@]} sequences selected for Chai-1 + AF3: ${top_ids[*]}"
 
-# ============================================================
 # STEP 5: CHAI-1 ON TOP 50
-# ============================================================
 echo "step 5: running Chai-1 on top 50 at $(timestamp)"
 
 numeric_ids=()
@@ -330,9 +286,7 @@ else
     echo "Chai-1 complete at $(timestamp): all ${n_chai_ids} ids present"
 fi
 
-# ============================================================
 # STEP 6: AF3 ON TOP 50 (job array, batches of 5 = 10 tasks)
-# ============================================================
 echo "step 6: running AF3 (array) on top 50 at $(timestamp)"
 
 "${biopython_python}" "${work_directory}/scripts/fasta_to_af3_nomsa.py" \
@@ -383,13 +337,8 @@ else
     echo "AF3 array complete at $(timestamp): all ${#numeric_ids[@]} ids present"
 fi
 
-# ============================================================
-# STEP 7 (CORRECTED): compile all four scores using protein-protein-
-# specific metrics (pair_chains_iptm for Boltz-2, per_chain_pair_iptm
-# from .npz for Chai-1), not the inflated all-chain-pair summaries.
-# protein_chain_count=2 (set at top of script) for this C2 dimer run.
-# ============================================================
-echo "step 7: compiling CORRECTED scores and selecting next-cycle seeds at $(timestamp)"
+# STEP 7: Compile All Scores For Expert-in-the-Loop
+echo "step 7: compiling scores and selecting next-cycle seeds at $(timestamp)"
 
 "${biopython_python}" - << EOF
 import json, csv, glob, os
