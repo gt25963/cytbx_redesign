@@ -1,32 +1,33 @@
 #!/usr/bin/env bash
-# dos2unix master_cytbx_screen_dense.sh if edited on Windows
 
-# ============================================================
-# CytbX Oligomeric State Screening — DENSE RPXDOCK VARIANT
+# CytbX Oligomeric State Screening - DENSE RPXDOCK VARIANT
 # Uses pre-existing best dense-sampled RPXDock pose per state
 # LigandMPNN -> Boltz-2 + ESM3 -> combined score
 # Compares directly against original screen_scores.csv baseline
-# ============================================================
+
+# This is the 'denser RPXDock sampling' control referenced in Results 1.1.
+# Reruns the same screening/scoring pipeline as the original oligomer_screen, but on a single higher-density-sampled RPXDock pose per state (rpxdock_top_n=1 vs the original's top_n=3), to check whether the default sampling density under-sampled the docking space. 
+# Produces screen_scores_dense.csv for direct comparison against the original screen_scores.csv.
 
 set -u
 
-# --- DIRECTORIES ---
+# DIRECTORIES
 home_directory="/home/b5ae/mvg2713124.b5ae"
 scratch_directory="/scratch/b5ae/mvg2713124.b5ae"
 work_directory="${scratch_directory}/cytbx_pipeline"
 screen_directory="${work_directory}/oligomer_screen_dense"
 trajectory_path="${screen_directory}/screen_trajectory"
 
-# --- PYTHON PATHS ---
+# PYTHON PATHS
 biopython_python="${home_directory}/miniconda3/envs/biopython/bin/python"
 
-# --- UTILITIES ---
+# UTILITIES
 timestamp() { date +"%F_%T"; }
 
-# --- INPUT ---
+# INPUT
 cytbx_monomer="/home/b5ae/mvg2713124.b5ae/cytbx_redesign/CytbX.pdb"
 
-# --- PARAMETERS ---
+# PARAMETERS
 oligomeric_states=(2 3 4 5)
 rpxdock_top_n=1
 ligand=HEM
@@ -36,10 +37,7 @@ total_sequences=20
 boltz_samples=2
 ipsae_cutoff=15
 
-# ============================================================
 # FOLDER SETUP
-# ============================================================
-
 echo "dense screening pipeline starting at $(timestamp)"
 mkdir -p "${trajectory_path}"
 mkdir -p "${work_directory}/logs"
@@ -60,21 +58,17 @@ done
 
 echo "folders ready at $(timestamp)"
 
-# ============================================================
-# PHASE 1: SKIPPED — using pre-existing dense RPXDock poses
+# PART 1: SKIPPED - using pre-existing dense RPXDock poses
 # Best pose per state already copied into C${state}/rpxdock/
-# ============================================================
 
-echo "phase 1 skipped — using pre-existing dense RPXDock poses at $(timestamp)"
+echo "part 1 skipped - using pre-existing dense RPXDock poses at $(timestamp)"
 
 for state in "${oligomeric_states[@]}"; do
     n_pdbs=$(find "${screen_directory}/C${state}/rpxdock" -name "*.pdb" 2>/dev/null | wc -l)
     echo "C${state}: ${n_pdbs} dense pose(s) found"
 done
 
-# ============================================================
-# PHASE 2: ADD HAEMS + LIGANDMPNN + BOLTZ-2 + ESM3
-# ============================================================
+# PART 2: ADD HAEMS + LIGANDMPNN + BOLTZ-2 + ESM3
 
 for state in "${oligomeric_states[@]}"; do
 
@@ -170,10 +164,7 @@ for state in "${oligomeric_states[@]}"; do
     done
 done
 
-# ============================================================
-# WAIT FOR ALL BOLTZ-2 AND ESM3
-# ============================================================
-
+# wait for all boltz + esm3
 echo "waiting for all Boltz-2 and ESM3 runs to complete..."
 
 for state in "${oligomeric_states[@]}"; do
@@ -206,11 +197,9 @@ for state in "${oligomeric_states[@]}"; do
     done
 done
 
-# ============================================================
-# PHASE 3: SCORE AND COMPARE TO ORIGINAL BASELINE
-# ============================================================
+# PART 3: SCORE AND COMPARE TO ORIGINAL BASELINE
 
-echo "phase 3: scoring dense poses at $(timestamp)"
+echo "part 3: scoring dense poses at $(timestamp)"
 
 echo "state,top_n,boltz_score,esm3_ptm,combined_score" > "${trajectory_path}/screen_scores_dense.csv"
 
@@ -270,11 +259,9 @@ sort -t, -k5,5 -n -r "${trajectory_path}/screen_scores_dense.csv" \
 best_state=$(awk -F',' 'NR==2 {print $1}' "${trajectory_path}/screen_scores_dense.csv")
 best_score=$(awk -F',' 'NR==2 {print $5}' "${trajectory_path}/screen_scores_dense.csv")
 
-echo "============================================================"
 echo "DENSE SCREENING COMPLETE at $(timestamp)"
 echo "Best dense oligomeric state: ${best_state} with combined score ${best_score}"
 echo "Compare against original baseline in ${work_directory}/screen_scores.csv"
-echo "============================================================"
 
 cp "${trajectory_path}/screen_scores_dense.csv" "${work_directory}/"
 echo "Dense screen scores saved to ${work_directory}/screen_scores_dense.csv"
