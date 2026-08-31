@@ -1,14 +1,13 @@
 #!/usr/bin/env bash
-# ============================================================
-# CytbX RQ2 Cofactor-Swap Scoring Pipeline -- FMN variant
-# Mirrors master_cytbx_4tool_C3.sh, adapted for RQ2:
-#   - starts at Step 3 (designs already exist from clash-checked LigandMPNN)
-#   - protein_chain_count=1; scores the PROTEIN<->COFACTOR pair [0][2]
-#     (not protein-protein). Chain order: A=protein(0), B=HEM(1), C=FMN(2)
-#   - retained native haem = HEM (chain B, index 1); swapped cofactor =
-#     FMN (chain C, index 2). Metric of interest is pocket binding => [0][2].
-#   - five-track selection retained, structurally identical to C3
-# ============================================================
+
+# CytbX RQ2 Cofactor-Swap Scoring Pipeline - FMN track
+# Mirrorsthe main pipelines from RQ1 (e.g. master_cytbx_4tool_C3.sh)
+# Except adapted for RQ2:
+## protein_chain_count=1; scores the PROTEIN - COFACTOR pair [0][2] (not protein-protein). 
+## chain order: A=protein(0), B=HEM(1), C=FMN(2)
+## retained native haem = HEM (chain B, index 1); swapped cofactor = FMN (chain C, index 2). 
+## Metric of interest is pocket binding => [0][2].
+
 set -u
 
 home_directory="/home/b5ae/mvg2713124.b5ae"
@@ -21,18 +20,17 @@ biopython_python="${home_directory}/miniconda3/envs/biopython/bin/python"
 
 timestamp() { date +"%F_%T"; }
 
-# ---- RQ2 INPUTS (edit these to point at a different design set) ----
+# RQ2 INPUTS
 cofactor="FMN"
 design_source="${work_directory}/rq2/design/FMN_pocket/cycle1_relaxed"
 input_fasta="rq2/design/FMN_pocket/cycle2_combined_input.fa"
-clash_csv="${design_source}/clash_check_results.csv"   # used to restrict to clash-free designs
-# --------------------------------------------------------------------
+clash_csv="${design_source}/clash_check_results.csv" ## used to restrict to clash-free designs
 
-ligand_spec="HEM:1,${cofactor}:1"   # retained haem + swapped cofactor, both by CCD
+ligand_spec="HEM:1,${cofactor}:1" ## retained haem + swapped cofactor, both by CCD
 boltz_samples=2
 top_n_for_chai_af3=50
 protein_chain_count=1
-cofactor_chain_index=2              # A=0 protein, B=1 HEM, C=2 cofactor
+cofactor_chain_index=2 ## A=0 protein, B=1 HEM, C=2 cofactor
 i=2
 
 echo "RQ2 ${cofactor} pipeline starting at $(timestamp)"
@@ -54,16 +52,16 @@ af3_output_path="${exec_directory}/cycle_${i}/af3/outputs"
 
 cp "${work_directory}/scripts/mpnn_to_boltz2_FIXED.sh" "${boltz_input_path}/mpnn_to_boltz2.sh"
 
-# ---- Step 2.5: restrict to clash-free designs ----
+# RESTRICT TO CLASH-FREE DESIGNS
 echo "step 2.5: building clash-free FASTA at $(timestamp)"
 clashfree_fasta="${boltz_input_path}/clashfree_input.fa"
 "${biopython_python}" - << EOF
 import csv, re, os
 clash_csv = "${clash_csv}"
-src_fa    = "${input_fasta}"
-out_fa    = "${clashfree_fasta}"
+src_fa = "${input_fasta}"
+out_fa = "${clashfree_fasta}"
 
-# collect clash-free design numbers from the clash CSV
+# clash-free design numbers from the clash CSV
 keep = set()
 with open(clash_csv) as f:
     for row in csv.DictReader(f):
@@ -74,7 +72,7 @@ with open(clash_csv) as f:
 print(f"{len(keep)} clash-free designs to score")
 
 # stream the FASTA, emit only records whose design id is clash-free.
-# LigandMPNN headers look like: >...,  id=N, ...   (N is the design index)
+# ligandMPNN headers: (N = design index)
 kept = 0
 with open(src_fa) as fin, open(out_fa, "w") as fout:
     write = False
@@ -94,8 +92,8 @@ fasta_file="${clashfree_fasta}"
 total_sequences=$(grep -c "^>" "${fasta_file}")
 echo "total clash-free sequences: ${total_sequences}"
 
-# ---- Step 3: FASTA -> Boltz YAML (two ligands: HEM + cofactor) ----
-echo "step 3: FASTA -> Boltz YAML (${ligand_spec}) at $(timestamp)"
+# FASTA -> Boltz YAML (2 ligands: HEM + cofactor)
+echo "step 3a: FASTA -> Boltz YAML (${ligand_spec}) at $(timestamp)"
 bash "${boltz_input_path}/mpnn_to_boltz2.sh" \
     "${fasta_file}" \
     -l "${ligand_spec}" \
@@ -133,8 +131,8 @@ while true; do
     echo "ESM3 running..."; sleep 30
 done
 
-# ---- Step 4: score Boltz outputs on PROTEIN<->COFACTOR pair [0][2] ----
-echo "step 4: scoring Boltz-2 (protein<->cofactor pair) at $(timestamp)"
+# SCORE BOLTZ OUTPUTS ON PROTEIN - COFACTOR PAIR [0][2]
+echo "step 4a: scoring Boltz-2 (protein - cofactor pair) at $(timestamp)"
 "${biopython_python}" - << EOF
 import json, csv, glob, os
 ci = ${cofactor_chain_index}     # cofactor chain index (2)
@@ -189,7 +187,7 @@ for id in "${top_ids[@]}"; do
     num=$(echo "${id}" | grep -oP '\d+$'); [ -n "${num}" ] && numeric_ids+=("${num}")
 done
 
-# ---- Step 5: Chai-1 array (single protein chain + 2 ligands) ----
+# CHAI ARRAY (single protein chain + 2 ligands)
 echo "step 5: Chai-1 on top ${#numeric_ids[@]} at $(timestamp)"
 top_ids_pattern=$(printf "| id=%s," "${numeric_ids[@]}"); top_ids_pattern="${top_ids_pattern:2}"
 grep -A1 -E "(${top_ids_pattern})" "${fasta_file}" > "${chai_input_path}/top_sequences.fa" 2>/dev/null || true
@@ -218,8 +216,8 @@ else
     echo "Chai-1 complete: all ${n_chai_ids} present"
 fi
 
-# ---- Step 6: AF3 array ----
-echo "step 6: AF3 (array) on top ${#numeric_ids[@]} at $(timestamp)"
+# AF3 ARRAY
+echo "step 6: AF3 on top ${#numeric_ids[@]} at $(timestamp)"
 "${biopython_python}" "${work_directory}/scripts/fasta_to_af3_nomsa_rq2.py" \
     "${chai_input_path}/top_sequences.fa" "${af3_input_path}" "${cofactor}"
 cd "${af3_input_path}"; mkdir -p batches; batch_i=0; batch=0
@@ -246,7 +244,7 @@ else
     echo "AF3 complete: all ${#numeric_ids[@]} present"
 fi
 
-# ---- Step 7: compile + five-track selection (protein<->cofactor [0][2]) ----
+# COMPILE + TRACK SELECTION 
 echo "step 7: compiling scores + seed selection at $(timestamp)"
 "${biopython_python}" - << EOF
 import json, csv, glob, os
