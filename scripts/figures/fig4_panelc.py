@@ -1,22 +1,22 @@
 import matplotlib.pyplot as plt
 import numpy as np
 
-# Data confirmed 9 July via direct Bio.PDB coordinate checks (design id111)
-# "HEM_B Site" = mean distance to His37/His95 (the originally intended target)
-# "HEM_C Site" = mean distance to His9/His67 (where AF3 and Boltz actually place FMN)
+# Figure 7 
+# "Hem1 Site" = mean distance to His37/His95
+# "Hem2 Site" = mean distance to His9/His67 
 
 structures = ['Original Scaffold\n(Design Intent)', 'AF3-Predicted\nStructure', 'Boltz-Predicted\nStructure']
 
 dist_to_hemB_site = [
-    (5.87 + 3.35) / 2,      # original scaffold: His37, His95
-    (16.04 + 14.89) / 2,    # AF3: His37, His95
-    (16.45 + 17.63) / 2,    # Boltz: His37, His95
+    (5.87 + 3.35) / 2, ## original scaffold: His37, His95
+    (16.04 + 14.89) / 2, ## AF3: His37, His95
+    (16.45 + 17.63) / 2, ## Boltz: His37, His95
 ]
 
 dist_to_hemC_site = [
-    (15.72 + 15.43) / 2,    # original scaffold: His9, His67
-    (4.29 + 7.84) / 2,      # AF3: His9, His67
-    3.81,                    # Boltz: His9 only (His67 not measured)
+    (15.72 + 15.43) / 2, ## original scaffold: His9, His67
+    (4.29 + 7.84) / 2, ## AF3: His9, His67
+    3.81, ## Boltz: His9 only (His67 not measured)
 ]
 
 x = np.arange(len(structures))
@@ -28,13 +28,13 @@ light_blue = "#7FB3E8"
 dark_blue = "#1B4F8C"
 
 bars1 = ax.bar(x - width/2, dist_to_hemB_site, width,
-                label='Distance To HEM_B Site (His37/His95)', color=dark_blue,
+                label='Distance to Hem1 (His37/His95)', color=dark_blue,
                 edgecolor='white', linewidth=0.8)
 bars2 = ax.bar(x + width/2, dist_to_hemC_site, width,
-                label='Distance To HEM_C Site (His9/His67)', color=light_blue,
+                label='Distancet to Hem2 (His9/His67)', color=light_blue,
                 edgecolor='white', linewidth=0.8)
 
-# Coordination range line, label placed inline with the legend area, aligned to the line itself
+# Coordination range line
 ax.axhline(y=6, color='grey', linestyle='--', linewidth=1, alpha=0.6)
 ax.annotate('Approx. Coordination Range', xy=(1.0, 6), xycoords=('axes fraction', 'data'),
             xytext=(10, 0), textcoords='offset points',
@@ -46,7 +46,7 @@ fig.suptitle('FMN Placement: Design Intent vs. Structure-Prediction Output',
 ax.set_xticks(x)
 ax.set_xticklabels(structures, fontsize=10.5)
 
-# Legend moved right and up, clear of the third pair of bars
+# Legend
 ax.legend(fontsize=9.5, loc='upper left', bbox_to_anchor=(1.02, 1.0), frameon=False)
 
 ax.spines['top'].set_visible(False)
@@ -65,5 +65,5 @@ for bars in [bars1, bars2]:
                     fontsize=9, fontweight='medium')
 
 plt.tight_layout()
-plt.savefig('fig4_panelC_placement_bias_v2.png', dpi=300, bbox_inches='tight')
-print("Saved to fig4_panelC_placement_bias_v2.png")
+plt.savefig('fig7_placement_bias_v2.png', dpi=300, bbox_inches='tight')
+print("Saved to fig7_placement_bias_v2.png")
