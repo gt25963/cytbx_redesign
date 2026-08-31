@@ -3,6 +3,8 @@ from rdkit.Chem import AllChem
 from rdkit.Chem.Draw import rdMolDraw2D
 from rdkit.Chem import rdMolDescriptors
 
+# SMILES for RQ2 cofactors - used for figures 5B and 8B
+# PubChem CID 643976 (FMN) and 5283546 (Q8)
 fmn_smiles = "CC1=CC2=C(C=C1C)N(C3=NC(=O)NC(=O)C3=N2)CC(C(C(COP(=O)(O)O)O)O)O"
 q8_smiles = "CC1=C(C(=O)C(=C(C1=O)OC)OC)CC=C(C)CCC=C(C)CCC=C(C)CCC=C(C)CCC=C(C)CCC=C(C)CCC=C(C)CCC=C(C)C"
 
