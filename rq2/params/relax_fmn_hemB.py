@@ -7,7 +7,7 @@ pyrosetta.init('-mp:lipids:has_pore false -relax:constrain_relax_to_start_coords
 pose=pose_from_pdb('rq2/design/FMN_hemB_pocket/holo_FMN_hemB_prerelax.pdb')
 sf=get_fa_scorefxn()
 print('score before:', round(sf(pose),1))
-fr=FastRelax(sf, 3)
+fr=FastRelax(sf, 3) ## standard cycle count
 fr.constrain_relax_to_start_coords(True)
 fr.apply(pose)
 print('score after :', round(sf(pose),1))
