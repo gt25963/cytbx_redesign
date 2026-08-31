@@ -108,7 +108,7 @@ sbatch "${work_directory}/submit_boltz.sh" \
 
 echo "step 3c: ESM3 on all sequences at $(timestamp)"
 cp "${fasta_file}" "${esm3_input_path}/"
-sbatch "${work_directory}/submit_esm3.sh" \
+sbatch "${work_directory}/submit_esm3_resumable.sh" \
     "rq2_${cofactor}_${i}" \
     "${esm3_input_path}/$(basename ${fasta_file})" \
     "${esm3_output_path}"
