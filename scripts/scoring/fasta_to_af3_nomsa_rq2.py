@@ -1,14 +1,12 @@
 #!/usr/bin/env python3
-"""
-RQ2 AF3 JSON prep: one protein chain (A) + retained HEM (B) + cofactor (C).
-Usage: python fasta_to_af3_nomsa_rq2.py <fasta_path> <output_dir> <cofactor>
-  <cofactor> is the CCD code FMN or U10.
-Chain order: A protein, B HEM, C cofactor -> chain_pair_iptm[0][2] = protein<->cofactor.
-"""
+
+# RQ2 AF3 JSON prep: one protein chain (A) + retained HEM (B) + cofactor (C).
+# This was used for FMN - there is stale u10 but kept in for the sake of transparency 
+
 import sys, re, json, os
 
 fasta_path, output_dir, cofactor = sys.argv[1], sys.argv[2], sys.argv[3]
-if cofactor not in ("FMN", "U10"):
+if cofactor not in ("FMN", "U10"): ## U10 was before q8 - this script kept because this was used for the FMN
     sys.exit(f"Unknown cofactor {cofactor}; expected FMN or U10")
 os.makedirs(output_dir, exist_ok=True)
 
