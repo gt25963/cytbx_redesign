@@ -1,4 +1,4 @@
-# Same as the fmnhem1_step7_compile_v2.py except for the q8 
+# Same as the fmn_step7_compile_v2.py except for the q8 
 # Only the step 7 compile script but with the burial and haem coordinate gate added as tracks aswell 
 # Top 3 shortlist per track which is then inspected manually in PYMOL
 
