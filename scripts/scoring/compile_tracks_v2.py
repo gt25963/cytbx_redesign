@@ -1,7 +1,6 @@
 #!/usr/bin/env python3
-"""
-compile_tracks_v2.py
-"""
+# compile_tracks_v2.py
+# standalone of the track seed selection - incase i need to reuse or just rerun that step 
 
 import argparse
 import csv
@@ -96,31 +95,29 @@ def main():
     if not have_esm:
         print("NOTE: --esm not supplied; Track 3 partial without it.")
     if have_esm:
-        print("NOTE: ESM3 contributes 'ptm' (fold confidence), not an "
-              "interface-specific metric -- Track 3 is diluted by this, "
-              "same caveat as the old Chai summary-iptm issue.")
+        print("NOTE: ESM3 contributes 'ptm' (fold confidence), not an interface-specific metric")
 
-    print("\n=== TRACK 1 (AF3 only) ===")
+    print("\n TRACK 1 (AF3 only) ")
     for r in top("track1_af3"):
         print(f"  id{r['id']}  {r['track1_af3']:.4f}")
 
-    print("\n=== TRACK 2 (AF3+Chai mean) ===")
+    print("\n TRACK 2 (AF3+Chai mean) ")
     for r in top("track2_af3chai_mean"):
         print(f"  id{r['id']}  {r['track2_af3chai_mean']:.4f}  "
               f"(af3={r['af3']}, chai={r['chai_corrected']})")
 
     if have_boltz or have_esm:
-        print("\n=== TRACK 3 (all-tool mean) ===")
+        print("\n TRACK 3 (all-tool mean)")
         for r in top("track3_all4_mean"):
             print(f"  id{r['id']}  {r['track3_all4_mean']:.4f}")
 
-    print("\n=== TRACK 4 (rank-sum consensus, lower=better) ===")
+    print("\n TRACK 4 (rank-sum consensus, lower=better)")
     for r in top("track4_rank_sum", reverse=False):
         print(f"  id{r['id']}  rank_sum={r['track4_rank_sum']}  "
               f"(af3_rank={r['af3_rank']}, chai_rank={r['chai_rank']}, "
               f"af3={r['af3']}, chai={r['chai_corrected']})")
 
-    print("\n=== TRACK 5 (Chai-1 only, corrected) ===")
+    print("\n TRACK 5 (Chai-1 only, corrected) ")
     for r in top("track5_chai_only"):
         print(f"  id{r['id']}  {r['track5_chai_only']:.4f}  (af3={r['af3']})")
 
