@@ -1,7 +1,6 @@
 #!/usr/bin/env python3
-"""C2 aggregate with Chai real protein-protein ipTM (max over 5 models)
-and AF3 reduced 3 ways for comparison: top-level aggregate, mean of samples, max of samples.
-Usage: python build_c2_aggregate_cmp.py <chai_outputs_dir> <af3_dir> <out_csv>"""
+#C2 aggregate with Chai real protein-protein ipTM (max over 5 models) and AF3 reduced 3 ways for comparison: top-level aggregate, mean of samples, max of samples.
+
 import numpy as np, glob, os, re, csv, json, sys
 
 chai_dir, af3_dir, out_csv = sys.argv[1], sys.argv[2], sys.argv[3]
@@ -9,7 +8,7 @@ chai_dir, af3_dir, out_csv = sys.argv[1], sys.argv[2], sys.argv[3]
 def bare(s):
     m = re.search(r"id(\d+)", s); return m.group(1) if m else None
 
-# --- Chai: real protein-protein ipTM = avg([0][1],[1][0]), max over 5 models ---
+# Chai: real protein-protein ipTM = avg([0][1],[1][0]), max over 5 models
 chai = {}
 for d in sorted(glob.glob(f"{chai_dir}/top_scoring.cif_id*/")):
     sid = bare(os.path.basename(d.rstrip("/")))
@@ -21,7 +20,10 @@ for d in sorted(glob.glob(f"{chai_dir}/top_scoring.cif_id*/")):
         vals.append((m[0,1] + m[1,0]) / 2)
     if vals: chai[sid] = float(max(vals))
 
-# --- AF3: three reductions on chain_pair_iptm[0][1] ---
+# AF3: three reductions on chain_pair_iptm[0][1]
+# af3_agg = AF3's top-level "best sample" summary file (one per design)
+# af3_mean = average across the individual per-seed sample files
+# af3_max = max across the individual per-seed sample files
 af3_agg, af3_samples = {}, {}
 for f in glob.glob(f"{af3_dir}/batch_*/id*/id*_summary_confidences.json"):
     parent = os.path.basename(os.path.dirname(f))
@@ -31,13 +33,13 @@ for f in glob.glob(f"{af3_dir}/batch_*/id*/id*_summary_confidences.json"):
         v = float(json.load(open(f))["chain_pair_iptm"][0][1])
     except Exception:
         continue
-    if "seed-" in parent:                       # individual sample
+    if "seed-" in parent: ## individual sample
         af3_samples.setdefault(sid, []).append(v)
-    else:                                        # top-level aggregate
+    else: ## top-level aggregate
         af3_agg[sid] = v
 
 af3_mean = {k: sum(v)/len(v) for k, v in af3_samples.items()}
-af3_max  = {k: max(v)        for k, v in af3_samples.items()}
+af3_max  = {k: max(v) for k, v in af3_samples.items()}
 
 ids = sorted(set(chai) | set(af3_agg) | set(af3_mean), key=lambda x: int(x))
 rows = []
@@ -69,7 +71,7 @@ print(f"{'id':>5} {'chai':>7} {'af3agg':>7} {'af3mn':>7} {'af3mx':>7}")
 for r in rows[:12]:
     print(f"{r['id']:>5} {r['chai_real_iptm']:>7.3f} {r['af3_agg']:>7.3f} {r['af3_mean']:>7.3f} {r['af3_max']:>7.3f}")
 
-# rank correlation: does AF3 reduction agree with Chai ordering?
+# rank correlation - actual decision making block
 from math import isnan
 def spearman(a, b):
     common = [k for k in a if k in b]
