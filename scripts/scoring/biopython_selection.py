@@ -1,10 +1,10 @@
 #!/usr/bin/env python3
-"""
-Interface residue selection for LigandMPNN input.
-- Identifies interface residues between subunits within 8A
-- Detects haem-coordinating His residues and adds to fixed residues
-- Outputs residue list for LigandMPNN --fixed_residues argument
-"""
+
+# Interface residue selection for LigandMPNN input.
+# - Identifies interface residues between subunits within 8 angstrom
+# - Detects haem-coordinating His residues and adds to fixed residues
+# - Outputs residue list for LigandMPNN --fixed_residues argument
+
 
 import sys
 from Bio.PDB import MMCIFParser
@@ -17,7 +17,8 @@ def get_interface_residues(structure, cutoff=8.0):
     ns = NeighborSearch(all_atoms)
     
     interface_residues = set()
-    
+
+    # only compares each chain pair once (chain_a < chain_b)
     for chain_a in chains:
         for chain_b in chains:
             if chain_a.id >= chain_b.id:
@@ -37,7 +38,7 @@ def get_interface_residues(structure, cutoff=8.0):
     return interface_residues
 
 
-def get_haem_coordinating_residues(structure, ligand_name="HEM", cutoff=6.0):
+def get_haem_coordinating_residues(structure, ligand_name="HEM", cutoff=6.0): # 6 angstrom is generous cutoff - this is just first pass - actual coordination still checked in PYMOL after
     """Find His residues coordinating haem iron atoms."""
     coordinating_residues = set()
     
@@ -82,7 +83,8 @@ def main():
     
     interface_residues = get_interface_residues(structure, cutoff=8.0)
     haem_residues = get_haem_coordinating_residues(structure, ligand_name="HEM", cutoff=6.0)
-    
+
+    # designable = interface positions minus anything already fixed for haem coordination -> ligMPNN never redesigns away a His that's holding the cofactor in place
     interface_only = interface_residues - haem_residues
     fixed = haem_residues
     
