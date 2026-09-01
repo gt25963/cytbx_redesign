@@ -1,8 +1,6 @@
 #!/usr/bin/env python3
-"""
-Add haem ligands from original CytbX monomer to RPXDock trimer output.
-Usage: python add_haem_to_trimer.py <rpxdock_trimer.pdb> <cytbx_monomer.pdb> <output.pdb>
-"""
+
+# Add haem ligands from original CytbX monomer to RPXDock trimer output.
 
 import sys
 import copy
@@ -11,7 +9,7 @@ from Bio.PDB import PDBParser, PDBIO
 from Bio.PDB.Superimposer import Superimposer
 
 
-def get_chain_transform(ref_chain, target_chain):
+def get_chain_transform(ref_chain, target_chain): ## CA-only superposition - maps monomer template onto this particular subunit's actual pose 
     ref_atoms = [a for a in ref_chain.get_atoms() if a.name == 'CA']
     target_atoms = [a for a in target_chain.get_atoms() if a.name == 'CA']
     min_len = min(len(ref_atoms), len(target_atoms))
@@ -48,11 +46,9 @@ def main():
         rot, tran = get_chain_transform(mono_chain, chain)
         for haem in haem_residues:
             new_haem = copy.deepcopy(haem)
-            # transform coordinates
-            for atom in new_haem.get_atoms():
+            for atom in new_haem.get_atoms(): ## transform coordinates
                 atom.transform(rot, tran)
-            # assign unique residue ID
-            new_haem.id = (" ", new_haem_id, " ")
+            new_haem.id = (" ", new_haem_id, " ") ## assign unique residue ID
             new_haem.segid = ""
             new_haem_id += 1
             chain.add(new_haem)
