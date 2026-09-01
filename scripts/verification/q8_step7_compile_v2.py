@@ -1,3 +1,7 @@
+# Same as the fmnhem1_step7_compile_v2.py except for the q8 
+# Only the step 7 compile script but with the burial and haem coordinate gate added as tracks aswell 
+# Top 3 shortlist per track which is then inspected manually in PYMOL
+
 import json, csv, glob, os, re
 import numpy as np
 from Bio.PDB import MMCIFParser
@@ -63,9 +67,9 @@ for f in files:
             af3_cif_paths[sid] = cif_candidates[0]
     except Exception: pass
 
-# Burial (Q8 vs each retained haem) and haem coordination gate (His37/His95 on HEM_B, His9/His67 on HEM_C)
-burial_vs_hemb = {}
-burial_vs_hemc = {}
+# Burial (Q8 vs each retained haem) and haem coordination gate (His37/His95 on Hem1, His9/His67 on Hem2)
+burial_vs_hem1 = {}
+burial_vs_hem2 = {}
 coord_gate = {}
 parser = MMCIFParser(QUIET=True)
 for sid, cif_path in af3_cif_paths.items():
@@ -73,17 +77,17 @@ for sid, cif_path in af3_cif_paths.items():
         structure = parser.get_structure("s", cif_path)[0]
         protein_atoms = np.array([a.coord for a in structure["A"].get_atoms()])
         uq8_atoms = np.array([a.coord for a in structure["D"].get_atoms() if a.get_parent().resname.strip() == "UQ8"])
-        hemb_atoms = np.array([a.coord for a in structure["B"].get_atoms() if a.get_parent().resname.strip() == "HEM"])
-        hemc_atoms = np.array([a.coord for a in structure["C"].get_atoms() if a.get_parent().resname.strip() == "HEM"])
+        hem1_atoms = np.array([a.coord for a in structure["B"].get_atoms() if a.get_parent().resname.strip() == "HEM"])
+        hem2_atoms = np.array([a.coord for a in structure["C"].get_atoms() if a.get_parent().resname.strip() == "HEM"])
 
-        if len(uq8_atoms) == 0 or len(hemb_atoms) == 0 or len(hemc_atoms) == 0:
+        if len(uq8_atoms) == 0 or len(hem1_atoms) == 0 or len(hem2_atoms) == 0:
             continue
 
         uq8_burial = sum(1 for p in protein_atoms if np.linalg.norm(uq8_atoms - p, axis=1).min() <= 8.0)
-        hemb_burial = sum(1 for p in protein_atoms if np.linalg.norm(hemb_atoms - p, axis=1).min() <= 8.0)
-        hemc_burial = sum(1 for p in protein_atoms if np.linalg.norm(hemc_atoms - p, axis=1).min() <= 8.0)
-        burial_vs_hemb[sid] = uq8_burial / hemb_burial if hemb_burial > 0 else 0.0
-        burial_vs_hemc[sid] = uq8_burial / hemc_burial if hemc_burial > 0 else 0.0
+        hem1_burial = sum(1 for p in protein_atoms if np.linalg.norm(hem1_atoms - p, axis=1).min() <= 8.0)
+        hem2_burial = sum(1 for p in protein_atoms if np.linalg.norm(hem2_atoms - p, axis=1).min() <= 8.0)
+        burial_vs_hem1[sid] = uq8_burial / hem1_burial if hem1_burial > 0 else 0.0
+        burial_vs_hem2[sid] = uq8_burial / hem2_burial if hem2_burial > 0 else 0.0
 
         fe_b = None
         for res in structure["B"]:
@@ -115,21 +119,21 @@ for sid, cif_path in af3_cif_paths.items():
         pass
 
 all_ids = set(chai_pl) | set(af3)
-print(f"Boltz ids: {len(boltz_pl)}, ESM3 ids: {len(esm3)}, Chai ids: {len(chai_pl)}, AF3 ids: {len(af3)}, Burial ids: {len(burial_vs_hemc)}, union(chai,af3): {len(all_ids)}")
+print(f"Boltz ids: {len(boltz_pl)}, ESM3 ids: {len(esm3)}, Chai ids: {len(chai_pl)}, AF3 ids: {len(af3)}, Burial ids: {len(burial_vs_hem2)}, union(chai,af3): {len(all_ids)}")
 
 results = []
 for sid in all_ids:
     c = chai_pl.get(sid, 0.0); a = af3.get(sid, 0.0)
     b = boltz_pl.get(sid, 0.0); e = esm3.get(sid, 0.0)
-    bur_hemb = burial_vs_hemb.get(sid, 0.0)
-    bur_hemc = burial_vs_hemc.get(sid, 0.0)
+    bur_hem1 = burial_vs_hem1.get(sid, 0.0)
+    bur_hem2 = burial_vs_hem2.get(sid, 0.0)
     gate = coord_gate.get(sid, False)
     results.append({"id": sid, "boltz_pl": b, "esm3_ptm": e, "chai_pl": c, "af3_pl": a,
-                    "burial_vs_hemb": bur_hemb, "burial_vs_hemc": bur_hemc,
+                    "burial_vs_hem1": bur_hem1, "burial_vs_hem2": bur_hem2,
                     "haem_coordination_gate": gate,
                     "track1_af3only": a, "track2_af3chai": (a+c)/2,
-                    "track3_all4": (a+c+b+e)/4, "track6_burial": bur_hemc,
-                    "track7_all5_mean": (a+c+b+e+bur_hemc)/5})
+                    "track3_all4": (a+c+b+e)/4, "track6_burial": bur_hem2,
+                    "track7_all5_mean": (a+c+b+e+bur_hem2)/5})
 
 ar = sorted(results, key=lambda r: -r["af3_pl"]); cr = sorted(results, key=lambda r: -r["chai_pl"])
 arank = {r["id"]: i+1 for i,r in enumerate(ar)}; crank = {r["id"]: i+1 for i,r in enumerate(cr)}
@@ -138,7 +142,7 @@ for r in results:
     r["track5_chai_only"] = r["chai_pl"]
 
 out_csv = f"{trajectory_dir}/all_scores_Q8_v2.csv"
-fn = ["id","boltz_pl","esm3_ptm","chai_pl","af3_pl","burial_vs_hemb","burial_vs_hemc","haem_coordination_gate",
+fn = ["id","boltz_pl","esm3_ptm","chai_pl","af3_pl","burial_vs_hem1","burial_vs_hem2","haem_coordination_gate",
       "track1_af3only","track2_af3chai","track3_all4","track4_rank_sum","track5_chai_only","track6_burial","track7_all5_mean"]
 with open(out_csv,"w",newline="") as f:
     w = csv.DictWriter(f, fieldnames=fn); w.writeheader(); w.writerows(results)
@@ -149,7 +153,7 @@ print(f"\n{len(gated_results)} of {len(results)} designs pass the haem coordinat
 
 specs = [("track1_af3only","Track1_AF3",True),("track2_af3chai","Track2_AF3Chai_mean",True),
          ("track3_all4","Track3_All4_mean",True),("track4_rank_sum","Track4_RankSumConsensus",False),
-         ("track5_chai_only","Track5_Chai_only",True),("track6_burial","Track6_Burial_vs_HEMC",True),
+         ("track5_chai_only","Track5_Chai_only",True),("track6_burial","Track6_Burial_vs_hem2",True),
          ("track7_all5_mean","Track7_All5_mean",True)]
 
 seeds_csv = f"{trajectory_dir}/next_cycle_shortlist_v2.csv"
@@ -168,11 +172,11 @@ for k, nm, hib in specs:
         seed_rows.append({"track": nm, "rank": rank, "id": cand["id"], "track_score": cand[k],
                           "boltz_pl": cand["boltz_pl"], "esm3_ptm": cand["esm3_ptm"],
                           "chai_pl": cand["chai_pl"], "af3_pl": cand["af3_pl"],
-                          "burial_vs_hemc": cand["burial_vs_hemc"], "haem_coordination_gate": cand["haem_coordination_gate"]})
+                          "burial_vs_hem2": cand["burial_vs_hem2"], "haem_coordination_gate": cand["haem_coordination_gate"]})
         lines.append(f"  {rank}. id{cand['id']} (score={cand[k]:.4f}, boltz={cand['boltz_pl']:.3f}, "
-                     f"esm3={cand['esm3_ptm']:.3f}, chai={cand['chai_pl']:.3f}, af3={cand['af3_pl']:.3f}, burial_vs_hemc={cand['burial_vs_hemc']:.3f})")
+                     f"esm3={cand['esm3_ptm']:.3f}, chai={cand['chai_pl']:.3f}, af3={cand['af3_pl']:.3f}, burial_vs_hem2={cand['burial_vs_hem2']:.3f})")
 with open(seeds_csv,"w",newline="") as f:
-    w = csv.DictWriter(f, fieldnames=["track","rank","id","track_score","boltz_pl","esm3_ptm","chai_pl","af3_pl","burial_vs_hemc","haem_coordination_gate"])
+    w = csv.DictWriter(f, fieldnames=["track","rank","id","track_score","boltz_pl","esm3_ptm","chai_pl","af3_pl","burial_vs_hem2","haem_coordination_gate"])
     w.writeheader(); w.writerows(seed_rows)
 
 uniq = sorted(set(r["id"] for r in seed_rows), key=lambda x: int(x)) if seed_rows else []
