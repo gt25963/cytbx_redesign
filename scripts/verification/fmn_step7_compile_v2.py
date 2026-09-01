@@ -137,7 +137,7 @@ for r in results:
     r["track4_rank_sum"] = arank[r["id"]] + crank[r["id"]]
     r["track5_chai_only"] = r["chai_pl"]
 
-out_csv = f"{trajectory_dir}/all_scores_FMN_hemB_v2.csv"
+out_csv = f"{trajectory_dir}/all_scores_FMN_hem1_v2.csv"
 fn = ["id","boltz_pl","esm3_ptm","chai_pl","af3_pl","burial_ratio","haem_coordination_gate","track1_af3only","track2_af3chai",
       "track3_all4","track4_rank_sum","track5_chai_only","track6_burial","track7_all5_mean"]
 with open(out_csv,"w",newline="") as f:
