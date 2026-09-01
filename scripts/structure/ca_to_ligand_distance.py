@@ -1,46 +1,13 @@
 #!/usr/bin/env python3
-"""
-ca_to_ligand_distance.py
 
-RQ2 decision tool. For each flagged residue, measures the distance from its
-backbone Calpha to the nearest heavy atom of the substituted cofactor
-(FMN or U10), in the original holo_hemC_swap_v2.pdb.
-
-Why: LigandMPNN repacking (pack_with_ligand_context) can change side-chain
-identity but cannot move the backbone. If a clash persists after repacking, the
-question is whether the Calpha itself sits inside the ligand volume.
-
-Interpretation (heavy-atom-to-Calpha distance d):
-    d < 3.0 A   -> BACKBONE problem. Calpha is essentially inside the ligand.
-                   No side chain can fix this. Needs backbone relaxation
-                   (FastRelax/FastDesign with ligand) or ligand re-placement.
-    3.0-4.5 A   -> BORDERLINE. Backbone is close; a small side chain may just
-                   fit, but the pocket is cramped. Relaxation likely still
-                   needed. Treat as backbone-limited.
-    d > 4.5 A   -> ROTAMER-level. Calpha has room; the clash was a side-chain
-                   placement issue that repacking should, in principle, address.
-
-The retained haem (resname HEM) is ignored entirely.
-
-Usage:
-    python ca_to_ligand_distance.py \
-        --pdb design/FMN_pocket/cycle_1/LigandMPNN/inputs/holo_hemC_swap_v2.pdb \
-        --ligand FMN --residues 44 67 106 107
-
-    python ca_to_ligand_distance.py \
-        --pdb design/U10_pocket/cycle_1/LigandMPNN/inputs/holo_hemC_swap_v2.pdb \
-        --ligand U10 --residues 9 67
-"""
+# APPROACH 2/3 ROSETTA ROUTES - not used in main pipeline or for main report 
+# RQ2 decision tool. For each flagged residue, measures the distance from its backbone C alpha to the nearest heavy atom of the substituted cofactor (FMN or U10), in the original holo_hemC_swap_v2.pdb.
 
 import argparse
 import math
 
 
 def parse_pdb(path):
-    """Return (ca_atoms, ligand_atoms_by_resname).
-    ca_atoms: dict (chain, resseq) -> (x,y,z)
-    ligand_atoms: dict resname -> list of (x,y,z) for heavy atoms
-    """
     ca = {}
     lig = {}
     with open(path) as fh:
