@@ -1,9 +1,6 @@
 #!/usr/bin/env python3
-"""
-Split a single-chain Boltz-2 CIF output into a proper oligomer.
-Usage: python split_chains.py <input.cif> <output.cif> <oligomeric_state>
-Example: python split_chains.py top_scoring.cif_id11_model_0.cif dimer.cif 2
-"""
+
+# Split a single-chain Boltz-2 CIF output into a proper oligomer.
 
 from Bio.PDB import MMCIFParser, MMCIFIO
 from Bio.PDB.Chain import Chain
@@ -18,8 +15,7 @@ def split_chains(input_cif, output_cif, oligomeric_state):
     
     model = list(structure.get_models())[0]
     
-    # get all protein residues from chain A
-    chain_a = model["A"]
+    chain_a = model["A"] ## get all protein residues from chain A
     protein_residues = [r for r in chain_a if r.id[0] == ' ']
     ligand_residues = [r for r in chain_a if r.id[0] != ' ']
     
