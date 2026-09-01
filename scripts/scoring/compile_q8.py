@@ -1,8 +1,5 @@
-"""
-RQ2 Q8 compile script.
-Usage: python compile_q8.py <cycle_number>
-Example: python compile_q8.py 4
-"""
+# Same as FMn script - but for RQ2 Q8 compile script.
+
 import json, csv, glob, os, re, sys
 import numpy as np
 from Bio.PDB import MMCIFParser
