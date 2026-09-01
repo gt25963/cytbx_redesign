@@ -1,17 +1,17 @@
 #!/usr/bin/env python3
-"""Build trustworthy highest_aggregate_scores.csv for a 4-tool state.
-Real protein-protein ipTM = avg of per_chain_pair_iptm[0][1] and [1][0] from npz.
-Reduces across the 5 Chai models per design via REDUCE (max|mean|best_agg).
-Usage: python build_c2_aggregate.py <chai_outputs_dir> <af3_dir> <out_csv>"""
+
+#Build highest_aggregate_scores.csv for C2.
+# feeds seed selectionm from master_cytbx_4tool
+
 import numpy as np, glob, os, re, csv, json, sys
 
 chai_dir, af3_dir, out_csv = sys.argv[1], sys.argv[2], sys.argv[3]
-REDUCE = "max"   # <-- set to max | mean | best_agg
+REDUCE = "max" ## set to max | mean | best_agg
 
 def bare(s):
     m = re.search(r"id(\d+)", s); return m.group(1) if m else None
 
-# --- Chai: real protein-protein ipTM per design ---
+# Chai: real protein-protein ipTM per design
 chai = {}
 for d in sorted(glob.glob(f"{chai_dir}/top_scoring.cif_id*/")):
     sid = bare(os.path.basename(d.rstrip("/")))
@@ -32,7 +32,7 @@ for d in sorted(glob.glob(f"{chai_dir}/top_scoring.cif_id*/")):
     elif REDUCE == "best_agg":
         chai[sid] = max(per_model, key=lambda p: p[1])[0]
 
-# --- AF3: chain_pair_iptm[0][1] (protein-protein), max over samples ---
+# AF3: chain_pair_iptm[0][1] (protein-protein), max over samples
 af3 = {}
 for f in glob.glob(f"{af3_dir}/**/*summary_confidences.json", recursive=True):
     sid = bare(f)
@@ -57,6 +57,7 @@ with open(out_csv, "w", newline="") as f:
     for r in rows:
         w.writerow({k:(f"{r[k]:.4f}" if k!="id" else r[k]) for k in r})
 
+# summary as sanity check - design counts and score ranges should look reasonable i guess 
 print(f"wrote {out_csv} ({len(rows)} designs, REDUCE={REDUCE})")
 print(f"chai designs={len(chai)} af3 designs={len(af3)}")
 cv = sorted(chai.values()); av = sorted(af3.values())
