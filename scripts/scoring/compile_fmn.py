@@ -1,8 +1,7 @@
-"""
-RQ2 FMN compile script.
-Usage: python compile_fmn.py <cycle_number>
-Example: python compile_fmn.py 5
-"""
+#RQ2 FMN compile script.
+#Example: python compile_fmn.py 5
+# Figure 5/6 scattter and trajectory scripts 
+
 import json, csv, glob, os, re, sys
 import numpy as np
 from Bio.PDB import MMCIFParser
@@ -21,7 +20,7 @@ def extract_orig_id(s):
     m = re.search(r'_id(\d+)$', s)
     return m.group(1) if m else None
 
-# Load top50 mapping
+# Load top50 mapping - needed b/c botlz/chai/esm3/af3 use their own id scheme per seed dir
 top50 = []
 with open(f"{TRAJ}/top50_FMN_cycle{cycle}.csv") as f:
     for row in csv.DictReader(f):
@@ -104,7 +103,7 @@ for jf in glob.glob(f"{CYCLE_DIR}/af3/outputs/batch_*/id*/*summary_confidences.j
     if cif: af3_cif_paths[nid] = cif[0]
 print(f"  AF3: {len(af3)} CIFs: {len(af3_cif_paths)}")
 
-# Burial and gate
+# Burial and coordination gate - from af3 
 print("Computing burial and gate...")
 burial = {}
 coord_gate = {}
