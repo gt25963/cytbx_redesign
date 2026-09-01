@@ -1,10 +1,9 @@
 #!/usr/bin/env python3
-"""
-Q8 AF3 JSON prep: protein (A) + BOTH hemes (B,C by CCD HEM) + Q8 (D by CCD UQ8).
-Q8 = ubiquinone-8, PDB CCD code UQ8 (C49H74O4, 56 PDB entries).
-Usage: python fasta_to_af3_q8.py <fasta_path> <output_dir>
-Chain order: A protein, B HEM_B, C HEM_C, D UQ8 -> [0][3] = protein<->Q8.
-"""
+
+#Q8 AF3 JSON prep: protein (A) + BOTH hemes (B,C by CCD HEM) + Q8 (D by CCD UQ8). - basically same as the fasta_to_af3_nomsa_rq2.py but for the q8 only
+#Q8 = ubiquinone-8, PDB CCD code UQ8 (C49H74O4, 56 PDB entries).
+#Chain order: A protein, B Hem1, C Hem2, D UQ8 -> [0][3] = protein<->Q8.
+
 import sys, re, json, os
 fasta_path, output_dir = sys.argv[1], sys.argv[2]
 os.makedirs(output_dir, exist_ok=True)
