@@ -27,8 +27,7 @@ def parse_pdb(path):
                 x = float(line[30:38]); y = float(line[38:46]); z = float(line[46:54])
             except ValueError:
                 continue
-            # skip hydrogens
-            if element == "H" or (not element and atom_name.startswith("H")):
+            if element == "H" or (not element and atom_name.startswith("H")): ## skip hydrogens
                 continue
             if rec == "ATOM" and atom_name == "CA":
                 ca[(chain, resseq)] = (x, y, z)
@@ -72,8 +71,7 @@ def main():
 
     backbone_hits = []
     for res in args.residues:
-        # find this residue's CA on any chain (or the requested chain)
-        candidates = [(ch, rs) for (ch, rs) in ca
+        candidates = [(ch, rs) for (ch, rs) in ca ## find this residue's CA on any chain (or the requested chain)
                       if rs == res and (args.chain is None or ch == args.chain)]
         if not candidates:
             print(f"{res:>5} {'--':>5} {'NO_CA':>9}  CA not found at this resseq")
@@ -89,11 +87,10 @@ def main():
     print("-" * 64)
     if backbone_hits:
         print(f"\n{len(backbone_hits)} position(s) are backbone-limited (d <= 4.5 A).")
-        print("=> Backbone relaxation with ligand present, or ligand re-placement,")
-        print("   is required before further LigandMPNN cycling is meaningful.")
+        print("Backbone relaxation with ligand present, or ligand re-placement = required")
     else:
         print("\nAll flagged positions are rotamer-level (d > 4.5 A).")
-        print("=> Backbone is not the problem; revisit repacking settings.")
+        print("Backbone is not the problem")
 
 
 if __name__ == "__main__":
