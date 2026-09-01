@@ -1,9 +1,8 @@
 #!/usr/bin/env python3
-"""
-Build a homo-oligomeric CIF by threading a LigandMPNN sequence onto the original holo PDB backbone.
-Usage: python build_oligomer_cif.py <holo.pdb> <sequence> <output.cif>
-Sequence format: chain1:chain2 or chain1:chain2:chain3 (colon-separated, one per chain)
-"""
+
+# Build a homo-oligomeric CIF by threading a LigandMPNN sequence onto the original holo PDB backbone.
+# Sequence format: chain1:chain2 or chain1:chain2:chain3 (colon-separated, one per chain)
+
 from Bio.PDB import PDBParser, MMCIFIO
 from Bio.SeqUtils import seq1
 import sys
