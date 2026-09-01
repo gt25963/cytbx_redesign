@@ -1,6 +1,8 @@
+# RQ2 step 7 compile for next seed selection - FMN
+# This one adds the burial ratio and haem-coordination gate ontop of the normal multi track compile 
+# Chain layout here: A=protein, B=retained HEM (Hem1 in this track's naming), C=FMN.
 import json, csv, glob, os, re
 import numpy as np
-from Bio.PDB import MMCIFParser
 from Bio.PDB import MMCIFParser
 
 ci = 2
@@ -13,7 +15,7 @@ esm3_csv = "/scratch/b5ae/mvg2713124.b5ae/cytbx_pipeline/rq2/master_pipeline/RQ2
 trajectory_dir = "/scratch/b5ae/mvg2713124.b5ae/cytbx_pipeline/rq2/master_pipeline/RQ2_FMN_hemB/design_trajectory/cycle_1"
 os.makedirs(trajectory_dir, exist_ok=True)
 
-def extract_num(s):
+def extract_num(s): ## tries standard 'idN' pattern first, falls back to ligMPNN packed_N_ naming if it doesnt match
     m = re.search(r'(?:^|_)id(\d+)(?:$|_)', s)
     if m:
         return m.group(1)
@@ -22,6 +24,7 @@ def extract_num(s):
         return m.group(1)
     return s
 
+# boltz
 boltz_pl = {}
 boltz_conf = {}
 for seq_dir in glob.glob(f"{boltz_predictions}/*/"):
@@ -37,8 +40,9 @@ for seq_dir in glob.glob(f"{boltz_predictions}/*/"):
             try: vals.append((pc[str(pi)][str(ci)] + pc[str(ci)][str(pi)])/2)
             except (KeyError, TypeError): pass
     if vals: boltz_pl[sid] = max(vals)
-    if confs: boltz_conf[sid] = sum(confs)/len(confs)
+    if confs: boltz_conf[sid] = sum(confs)/len(confs) ## collected but unused 
 
+# chai
 chai_pl = {}
 for npz in glob.glob(f"{chai_output_path}/*/scores.model_idx_*.npz"):
     sid_raw = os.path.basename(os.path.dirname(npz))
@@ -51,6 +55,7 @@ for npz in glob.glob(f"{chai_output_path}/*/scores.model_idx_*.npz"):
         s = (m[pi, ci] + m[ci, pi]) / 2
         if sid not in chai_pl or s > chai_pl[sid]: chai_pl[sid] = s
 
+# esm3
 esm3 = {}
 if os.path.exists(esm3_csv):
     with open(esm3_csv) as f:
@@ -59,6 +64,7 @@ if os.path.exists(esm3_csv):
             try: esm3[sid] = float(row["ptm"])
             except (KeyError, ValueError): pass
 
+# af3
 af3 = {}
 af3_cif_paths = {}
 files = glob.glob(f"{af3_output_path}/batch_*/*_summary_confidences.json") + \
@@ -74,8 +80,7 @@ for f in files:
     except Exception: pass
 
 # Track 6: burial ratio, computed directly from the AF3 structure
-# Haem coordination gate: His37/His95 must both sit under 3A from the retained haem Fe,
-# otherwise the AF3 structure has broken haem geometry and the design is excluded from ranking
+# Haem coordination gate: His37/His95 must both sit under 3A from the retained haem Fe, otherwise the AF3 structure has broken haem geometry and the design is excluded from ranking
 burial = {}
 coord_gate = {}
 parser = MMCIFParser(QUIET=True)
@@ -148,7 +153,7 @@ seeds_txt = f"{trajectory_dir}/next_cycle_shortlist_v2.txt"
 gated_results = [r for r in results if r["haem_coordination_gate"]]
 print(f"\n{len(gated_results)} of {len(results)} designs pass the haem coordination gate (His37 and His95 both under 3A)")
 
-seed_rows = []
+seed_rows = [] ## this script keeps top 3 shortlist per track, which are then expert-in-the-loop inspected 
 lines = [f"RQ2 FMN-at-HEM_B cycle 1 -- shortlist (top 3 per track, haem-coordination-gated)",
          f"From {len(gated_results)} of {len(results)} scored sequences passing the gate", ""]
 for k, nm, hib in specs:
