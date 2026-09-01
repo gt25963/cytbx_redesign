@@ -1,4 +1,6 @@
-"""RQ1 C3 pooled compile script, corrected."""
+# RQ1 C3 pooled compile script - CORRECTED
+# dual seed lineage - id40/id141 - Figure 2C
+
 import json, csv, glob, os, re, sys
 import numpy as np
 
