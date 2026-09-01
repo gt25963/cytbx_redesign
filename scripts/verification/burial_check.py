@@ -1,3 +1,4 @@
+# Burial ratio calculator - not hardcoded so can point it to packed ligMPNN
 import sys
 from Bio.PDB import MMCIFParser, PDBParser
 import numpy as np
@@ -32,13 +33,11 @@ def burial_ratio(structure, protein_chain, cofactor_chain, cofactor_resn, refere
                 dists = np.linalg.norm(ref_atoms - p, axis=1)
                 if dists.min() <= radius:
                     ref_count += 1
-            result["reference_burial_atoms"] = ref_count
-            result["burial_ratio_vs_reference"] = round(count / ref_count, 3) if ref_count > 0 else None
-
+            result["reference_burial_atoms"] = ref_count 
     return result
 
 if __name__ == "__main__":
-    path = sys.argv[1]
+    path = sys.argv[1] ## defaults assume standard FMN track chain layout - override for Q8 or others 
     protein_chain = sys.argv[2] if len(sys.argv) > 2 else "A"
     cofactor_chain = sys.argv[3] if len(sys.argv) > 3 else "C"
     cofactor_resn = sys.argv[4] if len(sys.argv) > 4 else "FMN"
