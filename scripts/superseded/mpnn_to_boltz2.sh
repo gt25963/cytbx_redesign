@@ -1,23 +1,8 @@
 #!/usr/bin/env bash
-#
+
+# Kept for transparency, not part of the active pipeline.
+# mpnn_to_boltz2.sh -> mpnn_to_boltz2_FIXED.sh. 
 # Convert LigandMPNN FASTA output into Boltz2 YAML input files.
-#
-# Usage:
-#   ./fasta_to_boltz2.sh input.fasta [-l "HEM:2,NAG:1"] [-o boltz2_inputs] [-c B]
-#
-# Arguments:
-#   input.fasta    FASTA file with LigandMPNN sequences
-#
-# Options:
-#   -l LIGANDS     Ligands (comma-separated, optional counts with colon)
-#                  e.g. "HEM", "HEM:2", "HEM:2,NAG:1"
-#                  Default: HEM
-#   -o OUTDIR      Output directory (default: boltz2_inputs)
-#   -c CHAIN_START Chain ID letter to start ligands from (default: B)
-#
-# Example:
-#   ./fasta_to_boltz2.sh ligandmpnn_output.fasta -l "HEM:2,NAG:1" -c L
-#
 
 set -euo pipefail
 
@@ -135,10 +120,10 @@ awk -v outdir="$outdir" -v ligand_ccd="$ligand_ccd" -v chain_start="$chain_start
   END {
     if (in_block && skip_block == 0 && seq != "") write_yaml()
 
-    print "? Summary:"
-    print "  YAML files generated: " yaml_count
-    print "  Total protein chains: " total_chains
-    print "  Total ligand entries: " total_ligands
+    print "Summary:"
+    print "YAML files generated: " yaml_count
+    print "Total protein chains: " total_chains
+    print "Total ligand entries: " total_ligands
   }
 ' "$fasta"
 
