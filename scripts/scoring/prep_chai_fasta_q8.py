@@ -1,10 +1,9 @@
 #!/usr/bin/env python3
-"""
-Q8 Chai-1 input prep: one protein chain + BOTH retained hemes + surface Q8.
-Q8 does NOT replace a haem (unlike FMN/U10); both hemes are kept.
-Usage: python prep_chai_fasta_q8.py <input.fasta> <output.fasta>
-Chain order: protein (A), HEM_B (B), HEM_C (C), Q8 (D) -> protein<->Q8 = [0][3].
-"""
+
+# Q8 Chai input prep: one protein chain + BOTH retained hemes + surface Q8.
+# Q8 does NOT replace a haem (unlike FMN); both hemes are kept.
+# Chain order: protein (A), HEM_B (B), HEM_C (C), Q8 (D) -> protein<->Q8 = [0][3].
+
 import re, sys
 HEM_SMILES = "CC1=C(CCC(O)=O)C2=[N]3C1=Cc1c(C)c(C=C)c4C=C5C(C)=C(C=C)C6=[N]5[Fe]3(n14)n1c(=C6)c(C)c(CCC(O)=O)c1=C2"
 Q8_SMILES = r"COC1=C(OC)C(=O)C(=C(C)C1=O)C\C=C(C)\CC\C=C(C)\CC\C=C(C)\CC\C=C(C)\CC\C=C(C)\CC\C=C(C)\CC\C=C(C)\CCC=C(C)C"
@@ -20,7 +19,7 @@ def reformat(input_fasta, output_fasta):
                 m = re.search(r">([^,]+).*id=(\d+)", line)
                 if m and i + 1 < len(lines):
                     pname, pid = m.group(1).strip(), m.group(2).strip()
-                    seq = lines[i + 1].split(":")[0]
+                    seq = lines[i + 1].split(":")[0] ## single chain only 
                     fout.write(f">protein|name={pname}_id{pid}_chain1\n{seq}\n")
                     fout.write(f">ligand|name=heme_b_retained\n{HEM_SMILES}\n")
                     fout.write(f">ligand|name=heme_c_retained\n{HEM_SMILES}\n")
