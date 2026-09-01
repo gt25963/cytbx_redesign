@@ -36,9 +36,6 @@ All computation was performed on the Isambard-AI HPC facility. Full methodologic
 - `debug_oneoff/` - One-off diagnostic/recovery scripts used during development; not part of the core reported pipeline but retained for full transparency
 - `example_outputs/` - Representative compiled score CSVs (one RQ1 C3 cycle, one RQ2 FMN cycle) showing the data format produced by `scripts/scoring/`.
 
->[!IMPORTANT]
->Full raw structure files (PDB/CIF, confidence JSONs) are not included due to size, but are available on request.
-
 > [!NOTE]
 > Ubiquinone-10 (U10/Q10) superseded the Q8 track. All scripts that contain U10 have been kept in for transparency, but know that for the final dissertation and project, Q8 is the correct cofactor.
  
