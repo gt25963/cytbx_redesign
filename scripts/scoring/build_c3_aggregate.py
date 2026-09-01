@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
-"""C3 trimer interface ipTM = mean over ALL protein-protein pairs, symmetrised,
-over the first N_PROT chains. Max over 5 Chai models."""
+# Same as the C2 aggregate but for C3 trimer 
+    
 import numpy as np, glob, os, re, csv, json, sys
 chai_dir, af3_dir, out_csv = sys.argv[1], sys.argv[2], sys.argv[3]
 N_PROT = int(sys.argv[4]) if len(sys.argv) > 4 else 3
