@@ -1,5 +1,8 @@
 #!/usr/bin/env python3
 
+# No MSA skip in this script - hence longer running time 
+# Meaning af3 would take about 20 mins per predictrion which is personally too long i discovered 
+
 import json 
 import sys
 import re
@@ -25,6 +28,7 @@ def fasta_to_json(fasta_path):
 
                 #current_id = line[1:].strip().split(',')[1]
                 #current_id = re.search(r'id=(\d+)', line).group(1)
+                ## more fragile than regex versions  - breaks if header field order changes - so not great.... 
                 current_id = line[1:].strip().split(',')[1].split('=')[1].strip()
                 current_seq = []
             else:
@@ -39,7 +43,7 @@ def fasta_to_json(fasta_path):
 
     return sequences
 
-def create_af3_fasta(sequences, ligands_list, output_path=""):
+def create_af3_fasta(sequences, ligands_list, output_path=""): ## af3 will run reals MSA if this version is used 
     for seq in sequences:
         af3 = {
             "name" : "seq"+seq['id'],
