@@ -1,10 +1,10 @@
 #!/usr/bin/env python3
-"""
-RQ2 Chai-1 input prep: one protein chain + retained HEM + swapped cofactor.
-Usage: python prep_chai_fasta_rq2.py <input.fasta> <output.fasta> <cofactor>
-  <cofactor> is FMN or U10 (selects the cofactor SMILES).
-Chain order written: protein (A), HEM (B), cofactor (C) -> indices 0,1,2.
-"""
+
+# RQ2 Chai input prep: one protein chain + retained HEM + swapped cofactor.
+# cofactor is FMN or U10 (selects the cofactor SMILES).
+# NOTE: this was prior to Q8 - and U10 was incorrectly placed inside and not adjacent to Hem2 - kept as it was run for transparency - except in the actual report Q8 was run through prep_chai_fasta_q8.py
+# Chain order written: protein (A), HEM (B), cofactor (C) -> indices 0,1,2.
+
 import re, sys
 
 HEM_SMILES = "CC1=C(CCC(O)=O)C2=[N]3C1=Cc1c(C)c(C=C)c4C=C5C(C)=C(C=C)C6=[N]5[Fe]3(n14)n1c(=C6)c(C)c(CCC(O)=O)c1=C2"
