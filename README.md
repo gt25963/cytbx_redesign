@@ -37,7 +37,7 @@ All computation was performed on the Isambard-AI HPC facility. Full methodologic
 - `example_outputs/` - Representative compiled score CSVs (one RQ1 C3 cycle, one RQ2 FMN cycle) showing the data format produced by `scripts/scoring/`.
 
 > [!NOTE]
-> Ubiquinone-10 (U10/Q10) superseded the Q8 track. All scripts that contain U10 have been kept in for transparency, but know that for the final dissertation and project, Q8 is the correct cofactor.
+> Ubiquinone-10 (U10/Q10) was an early stand-in, later superseded by the Q8 track. All scripts that reference U10 have been kept in for transparency, but Q8 is the cofactor reported in the final dissertation.
  
 ### Note on `scripts/figures/`
 
