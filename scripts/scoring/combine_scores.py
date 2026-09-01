@@ -1,8 +1,7 @@
 #!/usr/bin/env python3
-"""
-Combine Boltz-2 and ESM3 scores into a single ranked CSV.
-Usage: python combine_scores.py <boltz_scores.csv> <esm3_scores.csv> <output.csv>
-"""
+
+# Combine Boltz-2 + ESM3 scores into a single ranked CSV.
+# for any cross-state/cross-cycle comparison use rescore_simple.py instead 
 
 import csv
 import sys
