@@ -1,6 +1,6 @@
 # CytbX Redesign: Homo-Oligomeric Assembly and Cofactor Diversification
 
-Computational pipeline for the iterative redesign of the de novo membrane cytochrome CytbX, developed as part of an MSc Bioinformatics dissertation (University of Bristol, 2026). Two parallel research objectives:
+Computational pipeline for the iterative redesign of the **de novo** membrane cytochrome CytbX, developed as part of an MSc Bioinformatics dissertation (University of Bristol, 2026). Two parallel research objectives:
 
 - **RQ1**: Controlled homo-oligomeric assembly (C2/C3) compatible with hexagonal 2D membrane lattices
 - **RQ2**: Cofactor diversification via flavin mononucleotide (FMN) and ubiquinone-8 (Q8) binding
