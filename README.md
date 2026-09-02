@@ -44,7 +44,7 @@ All computation was performed on the Isambard-AI HPC facility. Full methodologic
 Where multiple figures share near-identical plotting logic (e.g. the RQ1 trajectory line plots, the RQ2 candidate-scatter comparisons), one representative script is kept per figure type - the plotting code is the same, only the source CSVs differ:
 
 - `figure2B.py` / `figure2C.py` / `figure2D.py` - prescreening bar chart, per-cycle score distribution box-plots, iterative trajectory line plot (shown for the C3 track; C2 and the RQ2 tracks use the same plotting logic against different source CSVs)
-- `figure4.py` - Chai-1 corrected vs aggregate score (covers both C2 and C3 panels)
+- `figure3.py` - Chai-1 corrected vs aggregate score (covers both C2 and C3 panels)
 - `figure6.py` - Chai-1 vs AlphaFold 3 candidate scatter (covers all four tracks: C2, C3, FMN, Q8)
 - `figure7.py` - FMN placement bias bar chart (design intent vs AF3/Boltz-predicted structure)
 - `cofactor_panels.py` - FMN/Q8 chemical structure renders
